@@ -1,12 +1,18 @@
 # Site settings
+<<<<<<< HEAD
 title: Renchao's Blog
 SEOTitle: 任超的博客 | Renchao's Blog
+=======
+title: renchao Blog
+SEOTitle: 任超的博客 | Your Blog
+>>>>>>> 34e8842afdf5f0ce3af4b96fb1216e007b92e257
 header-img: img/home-bg.jpg
 email: rcc0711@163.com
 description: "123456"
 keyword: "654321"
 url: "http://huangxuan.me"              # your host, for absolute URL
 baseurl: ""         # for example, '/blog' if your blog hosted on 'host/blog'
+
 
 
 
