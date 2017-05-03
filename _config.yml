@@ -1,22 +1,22 @@
 # Site settings
-title: Your Blog
-SEOTitle: 你的博客 | Your Blog
+title: Renchao's Blog
+SEOTitle: 任超的博客 | Renchao's Blog
 header-img: img/home-bg.jpg
-email: huxpro@gmail.com
-description: ""
-keyword: ""
+email: rcc0711@163.com
+description: "123456"
+keyword: "654321"
 url: "http://huangxuan.me"              # your host, for absolute URL
-baseurl: "/huxblog-boilerplate"         # for example, '/blog' if your blog hosted on 'host/blog'
+baseurl: ""         # for example, '/blog' if your blog hosted on 'host/blog'
 
 
 
 # SNS settings
 RSS: false
-weibo_username:     huxpro
-zhihu_username:     huxpro
-github_username:    huxpro
-#twitter_username:  huxpro
-facebook_username:  huxpro
+weibo_username:     3793085900
+zhihu_username:     renchaochao0711
+github_username:    renchao0711
+#twitter_username:  
+facebook_username:  
 
 
 
@@ -68,8 +68,8 @@ ga_domain: huangxuan.me
 
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
-sidebar-about-description: "写写代码，做做设计，看看产品。世界那么大，多玩玩看看。"
-sidebar-avatar: /img/avatar-hux.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
+sidebar-about-description: iOS开发 | 摄影 | 篮球 | 一生向往美景和自由 
+sidebar-avatar: /img/avatar-renchao.jpg       # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
 
@@ -82,19 +82,16 @@ featured-condition-size: 1              # A tag will be featured if the size of 
 # Friends
 friends: [
     {
-        title: "Hux Blog",
-        href: "http://huangxuan.me"
-    },{
-        title: "Foo",
+        title: "Stephen Curry",
         href: "#"
     },{
-        title: "Bar",
+        title: "Klay Thompson",
         href: "#"
     },{
-        title: "Example Friends",
+        title: "The Chainsmokers",
         href: "#"
     },{
-        title: "It helps SEO",
+        title: "Coldplay",
         href: "#"
     }
 ]
