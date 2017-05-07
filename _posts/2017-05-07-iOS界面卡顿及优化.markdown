@@ -112,20 +112,20 @@ CALayer 的 border、圆角、阴影、遮罩（mask），CASharpLayer 的矢量
 >`self.layer.shouldRasterize = YES;`  
  `self.layer.rasterizationScale = [UIScreen mainScreen].scale;`
 这样大部分情况下可以马上挽救你的帧数在55帧每秒以上。shouldRasterize = YES会使视图渲染内容被缓存起来，下次绘制的时候可以直接显示缓存，当然要在视图内容不改变的情况下，节省了一直离屏渲染损耗的性能。
+
 >**离屏渲染**：指的是GPU在当前屏幕缓冲区以外新开辟一个缓冲区进行渲染操作。可以知道离屏渲染耗时是发生在离屏这个动作上面，而不是渲染。为什么离屏这么耗时？原因主要有创建缓冲区和上下文切换。创建新的缓冲区代价都不算大，付出最大代价的是上下文切换。
+>
 >**圆角的优化**：通过UIBezierPath对象设置带圆角的作图区域。
-```
-- (void)drawRect:(CGRect)rect {
-CGRect bounds = self.bounds;
+	
+	(void)drawRect:(CGRect)rect {	
 
-[[UIColor whiteColor] set];
-UIRectFill(bounds);
+		CGRect bounds = self.bounds;
+		[[UIColor whiteColor] set];
+		UIRectFill(bounds);	
+		[[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:8.0] addClip];
+		[self.image drawInRect:bounds];
+	}
 
-[[UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:8.0] addClip];
-
-[self.image drawInRect:bounds];
-}
-```
 
 
 ## 三、UITableView的优化
@@ -158,6 +158,7 @@ UITableView只会创建一屏幕多一点的cell，其他需要展示的cell都�
 
 6. **图片载入**。此时是需要是时把文件解码到内存里。UIImage试图去draw图片时，读文件，渲染是在主线程，可以在后台解码，主线程中显示。
 > 拓展：UIImage的加载方式比较
+> 
 >1. `imageNamed`:
 这个方法用一个指定的名字在系统缓存中查找并返回一个图片对象如果它存在的话。如果缓存中没有找到相应的图片，这个方法从指定的文档中加载然后缓存并返回这个对象。因此imageNamed的优点是当__加载时会缓存图片__。所以当图片会频繁的使用时，那么用imageNamed的方法会比较好。用imageNamed的方式加载时，系统会把图像Cache到内存。如果图像比较大，或者图像比较多，用这种方式会消耗很大的内存，而且释放图像的 内存是一件相对来说比较麻烦的事情。例如：如果利用imageNamed的方式加载图像到一个动态数组NSMutableArray，然后将将数组赋予一 个UIView的对象的animationImages进行逐帧动画，那么这将会很有可能造成内存泄露。并且释放图像所占据的内存也不会那么简单。但是利用imageNamed加载图像也有自己的优势。__对于同一个图像系统只会把它Cache到内存一次__，这对于图像的重复利用是非常有优势的。例如：你需要在 一个TableView里重复加载同样一个图标，那么用imageNamed加载图像，系统会把那个图标Cache到内存，在Table里每次利用那个图 像的时候，只会把图片指针指向同一块内存。这种情况使用imageNamed加载图像就会变得非常有效。 
 >2. `NSString *filePath = [[NSBundle mainBundle] pathForResource:fileName ofType:extension]; 
@@ -167,6 +168,7 @@ NSData *image = [NSData dataWithContentsOfFile:filePath];
 NSString *filePath = [[NSBundle mainBundle] pathForResource:fileName ofType:@"图片扩展名"]; 
 [UIImage imageWithContentsOfFile:aImagePath]; `
 利用NSData或imageWithContentOfFile方式加载时，图像会被系统以数据方式加载到程序。当你不需要重用该图像，或者你需要 将图像以数据方式存储到数据库，又或者你要通过网络下载一个很大的图像时，请尽量使用imageWithData的方式加载图像。__仅加载图片，图像数据不会缓存__。因此对于较大的图片以及使用情况较少时，那就可以用该方法，降低内存消耗。
+
 7. **延迟加载**。对于不应该使用的数据，使用延迟加载方式。对于不需要马上显示的视图，使用延迟加载方式。比如，网络请求失败时显示的提示界面，可能一直都不会使用到，因此应该使用延迟加载。
 
 
@@ -190,7 +192,6 @@ Goodson。Scott(github:appleguy)曾经参与了多个iOS版本系统的开发，
 3. __系统objects的创建与销毁__。由于UIKit封装了CALayer以支持触摸等显示以外的操作，耗时也相应增加。而这些同样也需要在主线程上操作。ASDK基于Node的设计，突破了UIKit线程的限制。
 既然同步就意味着阻塞，那就异步放到其他线程去做，在需要主线程时再同步回来。
 
-
 我们知道对于一般UIView和CALayer来说，因为不是线程安全的，任何相关操作都需要在主线程进行。正如UIView可以弥补CALayer无法处理用户事件的不足一样，ASDK引入了Node的概念来解决UIView/CALayer只能在主线程上操作的限制（不由让人想起『Abstract layer can solve many problems, except problem of having too many abstract layers.』）。
 
 #### 主要特点：
@@ -200,17 +201,18 @@ Goodson。Scott(github:appleguy)曾经参与了多个iOS版本系统的开发，
 3. ASDK只有在认为需要的时候才会异步地为Node加载相应的View，因此创建Node的开销变得非常低。同时Node是线程安全的，可以在任意queue上创建和设置属性。
 4. ASDK不仅有与UIView对应的大部分控件（如ASButtonNode、ASTextNode、ASImageNode、ASTableNode等等），同时也bridge了大多数UIView的方法和属性，可以非常方便的操作frame/backgroundColor/addSubnode等，因此一般情况下只要对Node进行操作，ASDK就会在适当的时候同步到其View。如果需要的话，当相应的View加载之后（或访问node.view手动触发加载），也可以通过node.view的方式直接访问，回到我们熟悉的UIKit。
 5. 当实现自定义View的时候，ASDisplayNode提供了一个初始化方法initWithViewBlock/initWithLayerBlock，就可以将任意UIView/CALayer用Node包裹起来（被包裹的view可以使用autolayout），从而与ASDK的其他组件相结合。虽然这样创建的Node与一般view在布局和渲染上的差异不大，但是由于Node管理着何时何地加载view，我们仍然能得到一定的性能提升。
-```
+
 举例来说，当使用UIKit创建一个UIImageView：
-_imageView = [[UIImageView alloc] init];
-_imageView.image = [UIImage imageNamed:@"hello"];
-_imageView.frame = CGRectMake(10.0f, 10.0f, 40.0f, 40.0f);
-[self.view addSubview:_imageView];
+	
+	_imageView = [[UIImageView alloc] init];
+	_imageView.image = [UIImage imageNamed:@"hello"];
+	_imageView.frame = CGRectMake(10.0f, 10.0f, 40.0f, 40.0f);
+	[self.view addSubview:_imageView];
 
 使用ASDK后只要稍加改动：
-_imageNode = [[ASImageNode alloc] init];
-_imageNode.image = [UIImage imageNamed:@"hello"];
-_imageNode.frame = CGRectMake(10.0f, 10.0f, 40.0f, 40.0f);
-[self.view addSubview:_imageNode.view];
+
+	_imageNode = [[ASImageNode alloc] init];
+	_imageNode.image = [UIImage imageNamed:@"hello"];
+	_imageNode.frame = CGRectMake(10.0f, 10.0f, 40.0f, 40.0f);
+	[self.view addSubview:_imageNode.view];
 虽然只是简单的把View替换成了Node，然而和UIImageView不同的是，此时ASDK已经在悄悄使用另一个线程进行图片解码，从而大大降低新的用户操作到来时主线程被阻塞的概率，使每一个回调都能得到及时的处理。
-```
