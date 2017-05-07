@@ -1,10 +1,10 @@
 ---
 layout:     post
-title:      "Welcome to Hux Blog"
+title:      "Welcome to Renchao's Blog"
 subtitle:   " \"Hello World, Hello Blog\""
-date:       2015-01-29 12:00:00
-author:     "Hux"
-header-img: "img/post-bg-2015.jpg"
+date:       2017-05-03 11:00:00
+author:     "Renchao"
+header-img: "img/2017.05.03.jpg"
 tags: 
    - 生活
 ---
