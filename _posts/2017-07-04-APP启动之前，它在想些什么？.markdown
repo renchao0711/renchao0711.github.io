@@ -2,14 +2,12 @@
 layout:     post
 title:      "APP启动之前，它在想些什么？"
 subtitle:   "深层次理解一下APP的启动过程"
-date:       2017-07-03 13:00:00
-author:     "Renchao"
+date:       2017-07-04 13:00:00
+author:     "renchao"
 header-img: "img/2017.05.03.jpg"
-tags:  - iOS
-
+tags: 
+   - iOS
 ---
-
-
 
 # APP启动之前，它在想些什么？
 
