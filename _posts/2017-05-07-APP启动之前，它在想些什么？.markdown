@@ -1,11 +1,17 @@
 ---
 layout:     post
+
 title:      "APP启动之前，它在想些什么？"
-subtitle:   "深层次思考APP的启动"
-date:       2017-05-07 14:35:00
-author:     "renchao"
-header-img: "img/2017.05.07.1.jpg"
-tags: - iOS
+
+subtitle:   "不断攀登"
+
+date:       2017-07-08 13:25:00
+
+author:    "renchao"
+
+header-img: "img/2017.05.07.jpg"
+
+tags:  - iOS
 ---
 
 # APP启动之前，它在想些什么？
