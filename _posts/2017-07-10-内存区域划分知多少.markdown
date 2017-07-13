@@ -6,7 +6,7 @@ date:       2017-07-10 20:00:00
 author:     "Renchao"
 header-img: "img/2017.05.03.jpg"
 tags: 
-   - iOS
+   - 计算机
 ---
 
 ### OC之内存区域划分
