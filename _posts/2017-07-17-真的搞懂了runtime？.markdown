@@ -1,0 +1,526 @@
+---
+layout:     post
+title:      真的搞懂了runtime？"
+subtitle:   ""
+date:       2017-07-17 19:00:00
+author:     "renchao"
+header-img: "img/2017.05.03.jpg"
+tags: 
+   - iOS
+---
+
+
+
+## 真的搞懂了runtime？
+
+[TOC]
+
+### runtime简介
+
+runTime简称运行时。是一套底层的 C 语言 API，是 iOS 系统的核心之一，也是OC之所以使动态化语言的原因。开发者在编码过程中，可以给任意一个对象发送消息，在编译阶段只是确定了要向接收者发送这条消息，而接受者将要如何响应和处理这条消息，那就要看运行时来决定了。
+
+对于C语言，调用一个方法其实就是跳到内存中的某一点并开始执行一段代码。没有任何动态的特性，因为这在编译时就决定好了。
+
+对于OC语言，属于动态调用过程，在编译的时候并不能决定真正调用哪个函数，只有在真正运行的时候才会根据函数的名称找到对应的函数来调用。在编译阶段，OC可以调用任何函数，即使这个函数并未实现，只要声明过就不会报错。
+
+所以运行时机制的两个中心就是：**类的动态配置**、**消息传递**。
+
+### 几个关键点
+
+#### 类的本质
+
+在 Objective-C 中，类、对象和方法都是一个 C 的结构体，从 `objc/objc.h` 头文件中，我们可以找到他们的定义：
+
+```c
+//Objc2.0以后objc_class的定义：
+
+typedef struct objc_class *Class;
+typedef struct objc_object *id;
+
+@interface Object { 
+    Class isa; 
+}
+
+@interface NSObject <NSObject> {
+    Class isa  OBJC_ISA_AVAILABILITY;
+}
+
+struct objc_object {
+private:
+    isa_t isa;
+}
+
+struct objc_class : objc_object {
+    // Class ISA;
+    Class superclass;
+    cache_t cache;             // formerly cache pointer and vtable
+    class_data_bits_t bits;    // class_rw_t * plus custom rr/alloc flags
+}
+
+union isa_t 
+{
+    isa_t() { }
+    isa_t(uintptr_t value) : bits(value) { }
+    Class cls;
+    uintptr_t bits;
+}
+
+--------------------------------------------------------------------------------------------
+//2.0之前
+struct objc_object {  
+    Class isa  OBJC_ISA_AVAILABILITY; //指向元类
+};
+
+struct objc_class {  
+    Class isa  OBJC_ISA_AVAILABILITY;
+#if !__OBJC2__
+    Class super_class;        //指向父类
+    const char *name;         //类名
+    long version;             //类的版本号
+    long info;             	  //标志位
+    long instance_size;       //实例变量的大小(包括从父类继承下来的实例变量)
+    struct objc_ivar_list *ivars;             //用于存储每个成员变量的地址
+    **struct objc_method_list **methodLists**;//与 info 的一些标志位有关,如CLS_CLASS (0x1L),则存储对象方法，如CLS_META (0x2L)，则存储类方法;
+    **struct objc_cache *cache**;             //指向最近使用的方法的指针，用于提升效率
+    struct objc_protocol_list *protocols;     //存储该类遵守的协议
+#endif
+};
+
+struct objc_method_list {  
+    struct objc_method_list *obsolete;
+    int method_count;
+
+#ifdef __LP64__
+    int space;
+#endif
+
+    /* variable length structure */
+    struct objc_method method_list[1];
+};
+
+struct objc_method {  
+    SEL method_name;
+    char *method_types;    /* a string representing argument/return types */
+    IMP method_imp;
+};
+```
+
+把源码的定义转化成类图，就是下图的样子：
+
+![img](http://upload-images.jianshu.io/upload_images/1194012-06a854913380136c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+从上述源码中，我们可以看到，**Objective-C 对象都是 C 语言结构体实现的**，在objc2.0中，所有的对象都会包含一个isa_t类型的结构体。
+
+objc_object被源码typedef成了id类型，这也就是我们平时遇到的id类型。这个结构体中就只包含了一个isa_t类型的结构体。这个结构体在下面会详细分析。
+
+objc_class继承于objc_object。所以在objc_class中也会包含isa_t类型的结构体isa。至此，可以得出结论：**Objective-C 中类也是一个对象**。在objc_class中，除了isa之外，还有3个成员变量，一个是父类的指针，一个是方法缓存，最后一个这个类的实例方法链表。
+
+object类和NSObject类里面分别都包含一个objc_class类型的isa。
+
+上图的左半边类的关系描述完了，接着先从isa来说起。
+
+当一个对象的实例方法被调用的时候，会通过isa找到相应的类，然后在该类的class_data_bits_t中去查找方法。class_data_bits_t是指向了类对象的数据区域。在该数据区域内查找相应方法的对应实现。
+
+##### isa指针和元类
+
+因为在 Objective-C 中，对象的方法并**没有存储于对象的结构体中**（如果每一个对象都保存了自己能执行的方法，那么对内存的占用有极大的影响）。
+
+当**实例方法**被调用时，它要通过自己持有的 `isa` 来查找对应的类，然后在这里的 `class_data_bits_t` 结构体中查找对应方法的实现。同时，每一个 `objc_class` 也有一个**指向自己的父类的指针** `super_class` 用来查找继承的方法。
+
+类方法的实现又是如何查找并且调用的呢？这时，就需要引入*元类*来保证无论是类还是对象都能**通过相同的机制查找方法的实现**。![objc-isa-meta-class](http://7xrlu3.com1.z0.glb.clouddn.com/2016-04-21-objc-isa-meta-class.png)
+
+让每一个类的 `isa` 指向对应的元类，这样就达到了使类方法和实例方法的调用机制相同的目的：
+
+- 实例方法调用时，通过对象的 `isa` 在类中获取方法的实现
+- 类方法调用时，通过类的 `isa` 在元类中获取方法的实现
+
+meta-class之所以重要，是因为它存储着一个类的所有类方法。每个类都会有一个单独的meta-class，因为每个类的类方法基本不可能完全相同。
+
+isa的实现可以看这里：
+
+[从 NSObject 的初始化了解 isa](http://draveness.me/isa.html)
+
+[神经病院Objective-C Runtime入院第一天——isa和Class](http://www.jianshu.com/p/9d649ce6d0b8?utm_campaign=hugo&utm_medium=reader_share&utm_content=note)
+
+下面这张图介绍了对象，类与元类之间的关系，笔者认为已经觉得足够清晰了，所以不在赘述。
+
+![img](http://7xrlu3.com1.z0.glb.clouddn.com/2016-04-21-14611715787360.jpg)
+
+##### SEL
+
+**是一个SEL方法选择器。**SEL其主要作用是快速的通过方法名字查找到对应方法的函数指针，然后调用其函数。SEL其本身是一个Int类型的地址，地址中存放着方法的名字。Objective-C在编译时，会依据每一个方法的名字、参数序列，生成一个唯一的整型标识(Int类型的地址)，这个标识就是SEL。
+
+SEL的作用是作为IMP的KEY，存储在NSSet中，便于hash快速查询方法。SEL不能相同，对应方法可以不同。所以在Objective-C同一个类(及类的继承体系)中，不能存在2个同名的方法，就算参数类型不同。多个方法可以有同一个SEL。
+
+对于一个类中。每一个方法对应着一个SEL。所以一个类中不能存在2个名称相同的方法，即使参数类型不同，因为SEL是根据方法名字生成的，相同的方法名称只能对应一个SEL。不同的类可以有相同的方法名。不同类的实例对象执行相同的selector时，会在各自的方法列表中去根据selector去寻找自己对应的IMP。
+
+##### IMP
+
+IMP是指向实现函数的指针，通过SEL取得IMP后，我们就获得了最终要找的实现函数的入口。
+
+##### Method
+
+这个结构体相当于在SEL和IMP之间作了一个绑定。这样有了SEL，我们便可以找到对应的IMP，从而调用方法的实现代码。（在运行时才将SEL和IMP绑定, 动态配置方法）
+
+### 消息发送流程
+
+```objective-c
+//本质是会将类名转化成类对象，初始化方法其实是在创建类对象。
+[Person eat];
+
+// Person只是表示一个类名，并不是一个真实的对象。只要是方法必须要对象去调用。
+// RunTime 调用类方法同样，类方法也是类对象去调用，所以需要获取类对象，然后使用类对象去调用方法。
+Class personclass = [Persion class];
+[[Persion class] performSelector:@selector(eat)];
+
+// 类对象发送消息
+objc_msgSend(personclass, @selector(eat));
+```
+
+1. 首先，通过 obj 的 isa 指针找到它的 class ;
+2. 在class的cache中看是否有已缓存的方法实现(`method_name` 作为 key ，`method_imp` 为 value)；
+3. 在 class 的 method list 找 eat;
+4. 如果 class 中没到 eat，继续往它的 superclass 中找 ;
+5. 一旦找到 foo 这个函数，就去执行它的实现IMP .
+
+### 动态方法解析和转发
+
+在上面的例子中，如果 `eat` 没有找到会发生什么？通常情况下，程序会在运行时挂掉并抛出 *unrecognized selector sent to …* 的异常。但在异常抛出前，Objective-C 的运行时会给你三次拯救程序的机会：
+
+1. Method resolution
+2. Fast forwarding
+3. Normal forwarding
+
+#### Method Resolution（给你个机会实现它）
+
+首先，Objective-C 运行时会调用 `+resolveInstanceMethod:` 或者 `+resolveClassMethod:`，让你有机会提供一个函数实现。如果你添加了函数并返回 YES， 那运行时系统就会重新启动一次消息发送的过程。还是以 `eat` 为例，你可以这么实现：
+
+```objective-c
+void EatMethod(id obj, SEL _cmd)  
+{
+    NSLog(@"Doing eat");
+}
+
++ (BOOL)resolveInstanceMethod:(SEL)aSEL
+{
+    if(aSEL == @selector(eat:)){
+        class_addMethod([self class], aSEL, (IMP)EatMethod, "v@:");
+        return YES;
+    }
+    return [super resolveInstanceMethod];
+}
+
+
+//PS：iOS 4.3 加入很多新的 runtime 方法，主要都是以 imp 为前缀的方法，比如imp_implementationWithBlock()用 block 快速创建一个 imp 。上面的例子可以重写成：
+IMP eatIMP = imp_implementationWithBlock(^(id _self) {  
+    NSLog(@"Doing eat");
+});
+
+class_addMethod([self class], aSEL, eatIMP, "v@:");  
+```
+
+Core Data 有用到这个方法。NSManagedObjects 中 properties 的 getter 和 setter 就是在运行时动态添加的。
+
+#### Fast forwarding（备胎对象呢）
+
+如果 resolve 方法返回 NO ，运行时就会移到**消息转发（Message Forwarding）**。
+
+如果目标对象实现了 `-forwardingTargetForSelector:` ，Runtime 这时就会调用这个方法，给你把这个消息转发给其他对象的机会。
+
+```objective-c
+- (id)forwardingTargetForSelector:(SEL)aSelector
+{
+    if(aSelector == @selector(foo:)){
+        return alternateObject;
+    }
+    return [super forwardingTargetForSelector:aSelector];
+}
+```
+
+只要这个方法返回的不是 nil 和 self，整个消息发送的过程就会被重启，当然发送的对象会变成你返回的那个对象。否则，就会继续 Normal Fowarding 。
+
+这里叫 Fast ，只是为了区别下一步的转发机制。因为这一步不会创建任何新的对象，但下一步转发会创建一个 NSInvocation 对象，所以相对更快点。
+
+#### Normal forwarding（那就正式转发了吧）
+
+这一步是 Runtime 最后一次给你挽救的机会。首先它会发送 `-methodSignatureForSelector:` 消息获得函数的参数和返回值类型。如果 `-methodSignatureForSelector:` 返回 nil ，Runtime 则会发出 `-doesNotRecognizeSelector:` 消息，程序这时也就挂掉了。如果返回了一个函数签名，Runtime 就会创建一个 NSInvocation 对象并发送 `-forwardInvocation:` 消息给目标对象。
+
+NSInvocation 实际上就是对一个消息的描述，包括selector 以及参数等信息。所以你可以在 `-forwardInvocation:` 里修改传进来的 NSInvocation 对象，然后发送 `-invokeWithTarget:` 消息给它，传进去一个新的目标：
+
+```objective-c
+- (void)forwardInvocation:(NSInvocation *)invocation
+{
+    SEL sel = invocation.selector;
+
+    if([alternateObject respondsToSelector:sel]) {
+        [invocation invokeWithTarget:alternateObject];
+    } 
+    else {
+        [self doesNotRecognizeSelector:sel];
+    }
+}
+```
+
+### runtime的应用
+
+#### category
+
+```c
+typedef struct objc_category *Category;
+
+struct objc_category {
+    char *category_name                          OBJC2_UNAVAILABLE; // 分类名
+    char *class_name                             OBJC2_UNAVAILABLE; // 分类所属的类名
+    struct objc_method_list *instance_methods    OBJC2_UNAVAILABLE; // 实例方法列表
+    struct objc_method_list *class_methods       OBJC2_UNAVAILABLE; // 类方法列表
+    struct objc_protocol_list *protocols         OBJC2_UNAVAILABLE; // 分类所实现的协议列表
+}  
+
+// objc-runtime-new.h中定义：
+struct category_t {
+    const char *name;                        // name 是指 class_name 而不是 category_name
+    classref_t cls;                          // cls是要扩展的类对象，编译期间是不会定义的，而是在Runtime阶段通过name对应到对应的类对象
+    struct method_list_t *instanceMethods;       
+    struct method_list_t *classMethods;
+    struct protocol_list_t *protocols;
+    struct property_list_t *instanceProperties;    // instanceProperties表示Category里所有的properties，(这就是我们可以通过objc_setAssociatedObject和objc_getAssociatedObject增加实例变量的原因，)不过这个和一般的实例变量是不一样的
+
+};
+```
+
+category就是定义方法的结构体，instance_methods列表是objc_class中方法列表的一个子集，class_methods列表是元类方法列表的一个子集。由其结构成员可知，category为什么不能添加成员变量（可添加属性，只有set/get方法）。
+
+给category添加方法后，category_list会生成method list。这个方法列表是倒序添加的，也就是说，新生成的category的方法会先于旧的category的方法插入。（category的方法会优先于类方法执行）。
+
+##### 用runtime动态添加属性
+
+我们都知道，在分类中不能够添加属性，因为合成属性会生成对应的实例变量，而分类是不允许添加实例变量的，实例变量所在内存区域已初始化，不可以更改内存布局，无法在运行时更改。
+
+虽然不能增加实例变量，但是可以添加属性，此时的添加属性意思是不自动生成实例变量，但是要手动添加set和get方法，同时标记属性为动态获取。
+
+一种方法是使用关联属性的技术：
+
+```objective-c
+-(void)setName:(NSString *)name
+{
+    objc_setAssociatedObject(self, @"name",name, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+-(NSString *)name
+{
+    return objc_getAssociatedObject(self, @"name");    
+}
+```
+
+#### Method Swizzling
+
+首先定义一个类别，添加将要 Swizzled 的方法：
+
+```objective-c
+@implementation UIViewController (Logging)
+
+- (void)swizzled_viewDidAppear:(BOOL)animated
+{
+    // call original implementation
+    [self swizzled_viewDidAppear:animated];
+
+    // Logging
+    [Logging logWithEventName:NSStringFromClass([self class])];
+}
+```
+
+接下来实现 swizzle 的方法 ：
+
+```objective-c
+@implementation UIViewController (Logging)
+
+void swizzleMethod(Class class, SEL originalSelector, SEL swizzledSelector)  
+{
+    // the method might not exist in the class, but in its superclass
+    Method originalMethod = class_getInstanceMethod(class, originalSelector);
+    Method swizzledMethod = class_getInstanceMethod(class, swizzledSelector);
+
+    // class_addMethod will fail if original method already exists
+    BOOL didAddMethod = class_addMethod(class, originalSelector, method_getImplementation(swizzledMethod), method_getTypeEncoding(swizzledMethod));
+
+    // the method doesn’t exist and we just added one
+    if (didAddMethod) {
+        class_replaceMethod(class, swizzledSelector, method_getImplementation(originalMethod), method_getTypeEncoding(originalMethod));
+    } 
+    else {
+        method_exchangeImplementations(originalMethod, swizzledMethod);
+    }
+}
+```
+
+这里唯一可能需要解释的是 `class_addMethod` 。要先尝试添加原 selector 是为了做一层保护，因为如果这个类没有实现 `originalSelector` ，但其父类实现了，那 `class_getInstanceMethod` 会返回父类的方法。这样 `method_exchangeImplementations` 替换的是父类的那个方法，这当然不是你想要的。所以我们先尝试添加 `orginalSelector` ，如果已经存在，再用 `method_exchangeImplementations` 把原方法的实现跟新的方法实现给交换掉。
+
+最后，我们只需要确保在程序启动的时候调用 `swizzleMethod` 方法。比如，我们可以在之前 `UIViewController` 的 Logging 类别里添加 `+load:` 方法，然后在 `+load:` 里把 `viewDidAppear` 给替换掉：
+
+```objective-c
+@implementation UIViewController (Logging)
+
++ (void)load
+{
+    swizzleMethod([self class], @selector(viewDidAppear:), @selector(swizzled_viewDidAppear:));
+}
+```
+
+一般情况下，类别里的方法会重写掉主类里相同命名的方法。如果有两个类别实现了相同命名的方法，只有一个方法会被调用。但 `+load:` 是个特例，当一个类被读到内存的时候， runtime 会给这个类及它的每一个类别都发送一个 `+load:` 消息。
+
+其实，这里还可以更简化点：直接用新的 IMP 取代原 IMP ，而不是替换。只需要有全局的函数指针指向原 IMP 就可以。
+
+```objective-c
+void (gOriginalViewDidAppear)(id, SEL, BOOL);
+
+void newViewDidAppear(UIViewController *self, SEL _cmd, BOOL animated)  
+{
+    // call original implementation
+    gOriginalViewDidAppear(self, _cmd, animated);
+
+    // Logging
+    [Logging logWithEventName:NSStringFromClass([self class])];
+}
+
++ (void)load
+{
+    Method originalMethod = class_getInstanceMethod(self, @selector(viewDidAppear:));
+    gOriginalViewDidAppear = (void *)method_getImplementation(originalMethod);
+
+    if(!class_addMethod(self, @selector(viewDidAppear:), (IMP) newViewDidAppear, method_getTypeEncoding(originalMethod))) {
+        method_setImplementation(originalMethod, (IMP) newViewDidAppear);
+    }
+}
+```
+
+通过 Method Swizzling ，我们成功把逻辑代码跟处理事件记录的代码解耦。
+
+##### 用runtime交换方法
+
+交换方法的本质其实是交换两个方法的实现，即调换xx_ccimageNamed和imageName方法，达到调用xx_ccimageNamed其实就是调用imageNamed方法的目的
+
+那么首先需要明白方法在哪里交换，因为交换只需要进行一次，所以在分类的load方法中，当加载分类的时候交换方法即可。
+
+```objective-c
+ +(void)load
+{
+    // 获取要交换的两个方法
+    // 获取类方法  用Method 接受一下
+    // class ：获取哪个类方法 
+    // SEL ：获取方法编号，根据SEL就能去对应的类找方法。
+    Method imageNameMethod = class_getClassMethod([UIImage class], @selector(imageNamed:));
+    // 获取第二个类方法
+    Method xx_ccimageNameMrthod = class_getClassMethod([UIImage class], @selector(xx_ccimageNamed:));
+    // 交换两个方法的实现 方法一 ，方法二。
+    method_exchangeImplementations(imageNameMethod, xx_ccimageNameMrthod);
+    // IMP其实就是 implementation的缩写：表示方法实现。
+}
+```
+
+**注意：交换方法时候 xx_ccimageNamed方法中就不能再调用imageNamed方法了，因为调用imageNamed方法实质上相当于调用 xx_ccimageNamed方法，会循环引用造成死循环。**
+
+#### runtime字典转模型
+
+首先来看一下KVC字典转模型和RunTime字典转模型的区别
+
+> **KVC：KVC字典转模型实现原理是遍历字典中所有Key，然后去模型中查找相对应的属性名，要求属性名与Key必须一一对应，字典中所有key必须在模型中存在。**
+>
+> **RunTime：RunTime字典转模型实现原理是遍历模型中的所有属性名，然后去字典查找相对应的Key，也就是以模型为准，模型中有哪些属性，就去字典中找那些属性。**
+
+**RunTime字典转模型的优点：当服务器返回的数据过多，而我们只使用其中很少一部分时，没有用的属性就没有必要定义成属性浪费不必要的资源。只保存最有用的属性即可。**
+
+**RunTime字典转模型过程**
+首先需要了解，属性定义在类里面，那么类里面就有一个属性列表，属性列表以数组的形式存在，根据属性列表就可以获得类里面的所有属性名，所以遍历属性列表，也就可以遍历模型中的所有属性名。
+所以RunTime字典转模型过程就很清晰了。
+
+1. 创建模型对象
+
+   ```objective-c
+   id objc = [[self alloc] init];
+   ```
+
+2. 使用`class_copyIvarList`方法拷贝成员属性列表
+
+   ```objective-c
+   unsigned int count = 0;
+   Ivar *ivarList = class_copyIvarList(self, &count);
+   ```
+
+   参数一：`__unsafe_unretained Class cls`: 获取哪个类的成员属性列表。这里是self，因为谁调用分类中类方法，谁就是self。
+
+   参数二：`unsigned int *outCount`: 无符号int型指针，这里创建unsigned int型count，&count就是他的地址，保证在方法中可以拿到count的地址为count赋值。传出来的值为成员属性总数。
+
+   返回值：`Ivar *`: 返回的是一个Ivar类型的指针 。指针默认指向的是数组的第0个元素，指针+1会向高地址移动一个Ivar单位的字节，也就是指向第一个元素。Ivar表示成员属性。
+
+3. 遍历成员属性列表，获得属性列表
+
+   ```objective-c
+   for (int i = 0 ; i < count; i++) {
+        // 获取成员属性
+        Ivar ivar = ivarList[i];
+   }
+   ```
+
+4. 使用`ivar_getName(ivar)`获得成员属性名，因为成员属性名返回的是C语言字符串，将其转化成OC字符串
+
+   ```objective-c
+   NSString *propertyName = [NSString stringWithUTF8String:ivar_getName(ivar)];
+   ```
+
+   通过`ivar_getTypeEncoding(ivar)`也可以获得成员属性类型。
+
+5. 因为获得的是成员属性名，是带_的成员属性，所以需要将下划线去掉，获得属性名，也就是字典的key。
+
+   ```
+   // 获取key
+   NSString *key = [propertyName substringFromIndex:1];
+   ```
+
+6. 获取字典中key对应的Value。
+
+   ```
+   // 获取字典的value
+   id value = dict[key];
+   ```
+
+7. 给模型属性赋值，并将模型返回
+
+   ```
+   if (value) {
+   // KVC赋值:不能传空
+   [objc setValue:value forKey:key];
+   }
+   return objc;
+   ```
+
+   至此已成功将字典转为模型。
+
+#### super
+
+super并不是隐藏参数，它实际上只是一个”编译器标示符”，它负责告诉编译器，当调用方法时，跳过当前类去调用父类的方法，而不是本类中的方法。self是类的一个隐藏参数，每个方法的实现的第一个参数即为self。实际上给super发消息时，super还是与self指向的是相同的消息接收者。
+
+```c
+struct objc_super {
+   __unsafe_unretained id receiver;
+   __unsafe_unretained Class super_class;
+};
+```
+
+原理：使用super来接收消息时，编译器会生成一个objc_super结构体。发送消息时，不是调用objc_msgSend函数，而是调用objc_msgSendSuper函数:
+
+```c
+id objc_msgSendSuper ( struct objc_super *super, SEL op, ... );
+```
+
+ 该函数实际的操作是：从objc_super结构体指向的superClass的方法列表开始查找selector，找到后以objc->receiver去调用这个selector。
+
+
+
+### 感谢
+
+[深入解析 ObjC 中方法的结构](http://draveness.me/method-struct.html)
+
+[从源代码看 ObjC 中消息的发送](http://draveness.me/message.html)
+
+[对象是如何初始化的（iOS）](http://draveness.me/object-init.html)
+
+[从 NSObject 的初始化了解 isa](http://draveness.me/isa)
