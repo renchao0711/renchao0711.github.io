@@ -302,31 +302,6 @@ iOS触摸事件的流动见：[iOS触摸事件的流动](http://shellhue.github.
 
 ### main函数之前——从系统开始说起
 
-##### 从exec()开始
-
-main()函数是整个程序的入口，在程序启动之前，系统会调用exec()函数。在Unix中exec和system的不同在于，system是用shell来调用程序，相当于fork+exec+waitpid，fork
- 函数创建子进程后通常都会调用 exec 函数来执行一个新程序；而exec是直接让你的程序代替原来的程序运行。
-
-system 是在单独的进程中执行命令，完了还会回到你的程序中。而exec函数是直接在你的进程中执行新的程序，新的程序会把你的程序覆盖，除非调用出错，否则你再也回不到exec后面的代码，也就是当前的程序变成了exec调用的那个程序了。
-
-UNIX 提供了 6 种不同的 exec 函数供我们使用。
-
-```c
-#include <unistd.h>
-int execl(const char *pathname, const char *arg0, ... /* (char *)0 */);
-int execv(const char *pathname, char *const argv[]);
-int execle(const char *pathname, const char *arg0, ... /* (char *)0, char *const envp[] */);
-int execve(const char *pathname, char *const argv[], char *const envp[]);
-int execlp(const char *filename, const char *arg0, ... /* (char *)0 */);
-int execvp(cosnt char *filename, char *const argv[]);
-```
-
-通过分析我们发现，含有 l 和 v 的 exec 函数的参数表传递方式是不同的。含有 e 结尾的 exec 函数会传递一个环境变量列表。含有 p 结尾的 exec 函数取的是新程序的文件名作为参数，而其他exec 函数取的是新程序的路径。    
-
-如果函数出错则返回-1，若成功则没有返回值。其中只有execve是真正意义上的系统调用，其它都是在此基础上经过包装的库函数。
-
-exec函数族的作用是根据指定的文件名找到可执行文件，并用它来取代调用进程的内容，换句话说，就是在调用进程内部执行一个可执行文件。这里的可执行文件既可以是二进制文件，也可以是任何Unix下可执行的脚本文件。
-
 ##### iOS 系统架构
 
 Mac系统是基于Unix内核的图形化操作系统，Mac OS 和 iOS 系统架构的对比分析发现，Mac OS和iOS的系统架构层次只有最上面一层不同，Mac是Cocoa框架，而iOS是Cocoa Touch框架，其余的架构层次都是一样的。
@@ -347,20 +322,39 @@ Foundation是属于Objective-C的API，Core Fundation是属于C的API。另外Co
 
 核心基础框架与基础框架是紧密相关的，它们为相同的基本功能提供了Objective-C接口。如果开发者混合使用Foundation Objects 和Core Foundation类型，就能充分利用存在两个框架中的"toll-free bridging"技术（桥接）。toll-free bridging使开发者能使用这两个框架中的任何一个的核心基础和基础类型。
 
-#####动态链接库
+##### 从exec()开始
+
+main()函数是整个程序的入口，在程序启动之前，**系统会调用exec()函数**。
+
+在Unix中exec和system的不同在于，system 是在单独的进程中执行命令，完了还会回到你的程序中。而exec函数是直接在你的进程中执行新的程序，新的程序会把你的程序覆盖，除非调用出错，否则你再也回不到exec后面的代码，也就是当前的程序变成了exec调用的那个程序了。
+
+UNIX 提供了 6 种不同的 exec 函数供我们使用。
+
+```c
+#include <unistd.h>
+int execl(const char *pathname, const char *arg0, ... /* (char *)0 */);
+int execv(const char *pathname, char *const argv[]);
+int execle(const char *pathname, const char *arg0, ... /* (char *)0, char *const envp[] */);
+int execve(const char *pathname, char *const argv[], char *const envp[]);
+int execlp(const char *filename, const char *arg0, ... /* (char *)0 */);
+int execvp(cosnt char *filename, char *const argv[]);
+```
+
+通过分析我们发现，含有 l 和 v 的 exec 函数的参数表传递方式是不同的。含有 e 结尾的 exec 函数会传递一个环境变量列表。含有 p 结尾的 exec 函数取的是新程序的文件名作为参数，而其他exec 函数取的是新程序的路径。如果函数出错则返回-1，若成功则没有返回值。其中只有execve是真正意义上的系统调用，其它都是在此基础上经过包装的库函数。
+
+exec函数族的作用是根据指定的文件名找到可执行文件，并用它来取代调用进程的内容，换句话说，就是**在调用进程内部执行一个可执行文件**。这里的可执行文件既可以是二进制文件，也可以是任何Unix下可执行的脚本文件。
+
+#####动态链接库 
 
 iOS 中用到的所有系统 framework 都是动态链接的，类比成插头和插排，静态链接的代码在编译后的静态链接过程就将插头和插排一个个插好，运行时直接执行二进制文件；而动态链接需要在程序启动时去完成“插插销”的过程，所以在我们写的代码执行前，动态连接器需要完成准备工作。
 
-iOS中的相关文件有如下几种：Dylib，动态链接库（又称 DSO 或 DLL）；Bundle，不能被链接的 Dylib，只能在运行时使用 dlopen() 加载，可当做 macOS 的插件。Framework，包含 Dylib 以及资源文件和头文件的文件夹。
+iOS中的相关文件有如下几种：**Dylib**，动态链接库（又称 DSO 或 DLL）；**Bundle**，不能被链接的 Dylib，只能在运行时使用 dlopen() 加载，可当做 macOS 的插件；**Framework**，包含 Dylib 以及资源文件和头文件的文件夹。
 
-动态链接库是一组源代码的模块，每个模块包含一些可供应用程序或者其他动态链接库调用的函数，在应用程序调用一个动态链接库里面的函数的时候，操作系统会将动态链接库的文件映像映射到进程的地址空间中，这样进程中所有的线程就可以调用动态链接库中的函数了。动态链接库加载完成后，这个时候动态链接库对于进程中的线程来说只是一些被放在地址进程空间附加的代码和数据，操作系统为了节省内存空间，同一个动态链接库在内存中只有一个，操作系统也只会加载一次到内存中。
+**动态链接库是一组源代码的模块，每个模块包含一些可供应用程序或者其他动态链接库调用的函数，在应用程序调用一个动态链接库里面的函数的时候，操作系统会将动态链接库的文件映像映射到进程的地址空间中，这样进程中所有的线程就可以调用动态链接库中的函数了。动态链接库加载完成后，这个时候动态链接库对于进程中的线程来说只是一些被放在地址进程空间附加的代码和数据，操作系统为了节省内存空间，同一个动态链接库在内存中只有一个，操作系统也只会加载一次到内存中。**
 
 因为代码段在内存中的权限都是为只读的，所以当多个应用程序加载同一个动态链接库的时候，不用担心应用程序会修改动态链接库的代码段。当线程调用动态链接库的一个函数，函数会在线程栈中取得传递给他的参数，并使用线程栈来存放他需要的变量，动态链接库函数创建的任何对象都为调用线程或者调用进程拥有，动态链接库不会拥有任何对象。如果动态链接库中的一个函数调用了VirtualAlloc，系统会从调用进程的地址空间预定地址，即使撤销了对动态链接库的映射，调用进程的预定地址依然会存在，直到用户取消预定或者进程结束。
 
-静态链接库与动态链接库都是共享代码的方式，如果采用静态链接库，则无论你愿不愿意，lib 
-中的指令都全部被直接包含在最终生成的包文件中了。但是若使用 动态链接库，该 动态链接库 
-不必被包含在最终包里，包文件执行时可以“动态”地引用和卸载这个与 安装包 独立的 
-动态链接库文件。静态链接库和动态链接库的另外一个区别在于静态链接库中不能再包含其他的动态链接库或者静态库，而在动态链接库中还可以再包含其他的动态或静态链接库。
+静态链接库与动态链接库都是共享代码的方式，如果采用静态链接库，则无论你愿不愿意，lib中的指令都全部被直接包含在最终生成的包文件中了。但是若使用 动态链接库，该 动态链接库 不必被包含在最终包里，包文件执行时可以“动态”地引用和卸载这个与 安装包 独立的 动态链接库文件。静态链接库和动态链接库的另外一个区别在于静态链接库中不能再包含其他的动态链接库或者静态库，而在动态链接库中还可以再包含其他的动态或静态链接库。
 
 Linux中静态函数库的名字一般是libxxx.a；利用静态函数库编译成的文件比较大，因为整个函数库的所有数据都会被整合进目标代码中。编译后的执行程序不需要外部的函数库支持，因为所有使用的函数都已经被编译进去了。当然这也会成为他的缺点，因为如果静态函数库改变了，那么你的程序必须重新编译。
 
@@ -372,7 +366,7 @@ iOS中静态库可以用.a或.Framework文件表示，动态库的形式有.dyli
 
 .a是一个纯二进制文件，.framework中除了有二进制文件之外还有资源文件。.a文件不能直接使用，至少要有.h文件配合。.framework文件可以直接使用，.a + .h + sourceFile = .framework。
 
-除了多了的CoreGraphics（被 UIKit 依赖）外，有两个默认添加的 lib：libobjc 即 objc 和 runtime，libSystem 中包含了很多系统级别 lib，列几个熟知的：
+除了多了的CoreGraphics（被 UIKit 依赖）外，有两个默认添加的 **lib**：libobjc 即 objc 和 runtime，libSystem 中包含了很多系统级别 lib，列几个熟知的：
 
 - libdispatch ( GCD )
 - libsystem_c ( C语言库 )
@@ -381,25 +375,13 @@ iOS中静态库可以用.a或.Framework文件表示，动态库的形式有.dyli
 
 这些 lib 都是dylib格式（如 windows 中的 dll ），系统使用动态链接有几点好处：
 
-- 代码共用：很多程序都动态链接了这些 lib，但它们在内存和磁盘中中只有一份
-- 易于维护：由于被依赖的 lib 是程序执行时才 link 的，所以这些 lib 很容易做更新，比如libSystem.dylib 是 libSystem.B.dylib 的替身，哪天想升级直接换成 libSystem.C.dylib 然后再替换替身就行了
-- 减少可执行文件体积：相比静态链接，动态链接在编译时不需要打进去，所以可执行文件的体积要小很多
+- **代码共用**：很多程序都动态链接了这些 lib，但它们在内存和磁盘中中只有一份
+- **易于维护**：由于被依赖的 lib 是程序执行时才 link 的，所以这些 lib 很容易做更新，比如libSystem.dylib 是 libSystem.B.dylib 的替身，哪天想升级直接换成 libSystem.C.dylib 然后再替换替身就行了
+- **减少可执行文件体积**：相比静态链接，动态链接在编译时不需要打进去，所以可执行文件的体积要小很多
 
 #####dyld—Apple的动态链接器
 
 基于上面的分析，在exec()时，系统内核把应用映射到新的地址空间，每次起始位置都是随机的。然后使用dyld 加载 dylib 文件（动态链接库），dyld 在应用进程中运行的工作就是加载应用依赖的所有动态链接库，准备好运行所需的一切，它拥有和应用一样的权限。
-
-加载 Dylib时，先从主执行文件的 header 中获取需要加载的所依赖动态库的列表，从中找到每个 dylib，然后打开文件读取文件起始位置，确保它是 Mach-O 文件（针对不同运行时可执行文件的文件类型）。然后找到代码签名并将其注册到内核。
-
-应用所依赖的 dylib 文件可能会再依赖其他 dylib，因此动态库列表是一个递归依赖的集合。一般应用会加载 100 到 400 个 dylib 文件，但大部分都是系统 dylib，它们会被预先计算和缓存起来，加载速度很快。但加载内嵌（embedded）的 dylib 文件很占时间，所以尽可能把多个内嵌 dylib 合并成一个来加载，或者使用 static archive。
-
-在加载所有的动态链接库之后，它们只是处在相互独立的状态，代码签名使得我们不能修改指令，那样就不能让一个 dylib 调用另一个 dylib。通过fix-up可以将它们结合起来，dyld 所做的事情就是修正（fix-up）指针和数据。Fix-up 有两种类型，rebasing（在镜像内部调整指针的指向） 和 binding（将指针指向镜像外部的内容）。
-
-因为 dylib 之间有依赖关系，所以 动态库 中的好多操作都是沿着依赖链递归操作的，Rebasing 和 Binding 分别对应着 recursiveRebase() 和 recursiveBind() 这两个方法。因为是递归，所以会自底向上地分别调用 doRebase() 和 doBind() 方法，这样被依赖的 dylib 总是先于依赖它的 dylib 执行 Rebasing 和 Binding。
-
-Rebaing 消耗了大量时间在 I/O 上，在 Rebasing 和 Binding 前会判断是否已经 预绑定。如果已经进行过预绑定（Prebinding），那就不需要 Rebasing 和 Binding 这些 Fix-up 流程了，因为已经在预先绑定的地址加载好了。
-
-Binding 处理那些指向 dylib 外部的指针，它们实际上被符号（symbol）名称绑定，是一个字符串。dyld 需要找到 symbol 对应的实现，在符号表里查找时需要很多计算，找到后会将内容存储起来。Binding 看起来计算量比 Rebasing 更大，但其实需要的 I/O 操作很少，因为之前 Rebasing 已经替 Binding 做过了。Objective-C 中有很多数据结构都是靠 Rebasing 和 Binding 来修正（fix-up）的，比如 Class 中指向超类的指针和指向方法的指针。
 
 dyld（the dynamic link editor），系统 kernel 做好启动程序的初始准备后，交给 dyld 负责，援引并翻译《 Mike Ash 这篇 blog 》对 dyld 作用顺序的概括：
 
@@ -412,7 +394,7 @@ dyld（the dynamic link editor），系统 kernel 做好启动程序的初始准
 - 程序main函数 return 后执行 static terminator
 - 某些场景下 main 函数结束后调 libSystem 的 _exit 函数
 
-#####ImageLoader
+#####ImageLoader 
 当然这个 image 不是图片的意思，它大概表示一个二进制文件（可执行文件或 so 文件），里面是被编译过的符号、代码等，所以 ImageLoader 作用是将这些文件加载进内存，且每一个文件对应一个ImageLoader实例来负责加载。
 
 两步走：
@@ -444,12 +426,6 @@ dyld（the dynamic link editor），系统 kernel 做好启动程序的初始准
 - runtime 接手后调用 map_images 做解析和处理，接下来 load_images 中调用 call_load_methods 方法，遍历所有加载进来的 Class，按继承层级依次调用 Class 的 +load 方法和其 Category 的 +load 方法
 
 至此，可执行文件中和动态库所有的符号（Class，Protocol，Selector，IMP，…）都已经按格式成功加载到内存中，被 runtime 所管理，再这之后，runtime 的那些方法（动态添加 Class、swizzle 等等才能生效）
-
-##### OC调用
-
-C++ 会为静态创建的对象生成初始化器，与静态语言不同，OC基于Runtime机制可以用类的名字来实例化一个类的对象。Runtime 维护了一张映射类名与类的全局表，当加载一个 dylib 时，其定义的所有的类都需要被注册到这个全局表中。ObjC 在加载时可以通过 fix-up 在动态类中改变实例变量的偏移量，利用这个技术可以在不改变dylib的情况下添加另一个 dylib 中类的方法，而非常见的通过定义类别（Category）的方式改变一个类的方法。
-
-主执行文件和相关的 dylib的依赖关系构成了一张巨大的有向图，执行初始化器先加载叶子节点，然后逐步向上加载中间节点，直至最后加载根节点。这种加载顺序确保了安全性，加载某个 dylib 前，其所依赖的其余 dylib 文件肯定已经被预先加载。最后 dyld 会调用 main() 函数。main() 会调用 UIApplicationMain()，程序启动。
 
 #####总结
 整个事件由 dyld 主导，完成运行环境的初始化后，配合 ImageLoader 将二进制文件按格式加载到内存，动态链接依赖库，并由 runtime 负责加载成 objc 定义的结构，所有初始化工作结束后，dyld 调用真正的 main 函数。
