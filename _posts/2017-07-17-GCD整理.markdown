@@ -1,0 +1,291 @@
+---
+layout:     post
+title:      "GCD整理"
+subtitle:   ""
+date:       2017-07-17 10:11:00
+author:     "Renchao"
+header-img: "img/2017.05.03.jpg"
+tags: 
+   - iOS
+---
+
+
+
+## GCD
+
+![img](http://upload-images.jianshu.io/upload_images/691288-53f66f8bd22f4e11.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+[TOC]
+
+#### 什么是GCD？
+
+GCD全称为Grand Central Dispatch，是**libdispatch**的市场名称，而**libdispatch**是Apple的一个库，其为并发代码在iOS和OS X的多核硬件上执行提供支持。确切地说GCD是一套低层级的C API，通过 GCD，开发者只需要向队列中添加一段代码块(block或C函数指针)，而不需要直接和线程打交道。GCD在后端管理着一个线程池，它不仅决定着你的代码块将在哪个线程被执行，还根据可用的系统资源对这些线程进行管理。这样通过GCD来管理线程，从而解决线程被创建的问题。
+
+#### 优势
+
+苹果公司为多核的并行运算提出的一种基于C语言的底层解决方案，GCD会自动利用更多的CPU内核，如双核，四核等。GCD不是Cocoa框架的一部分。
+
+GCD会自动管理线程的生命周期，如创建，调度和销毁。程序员只需要告诉GCD想要执行什么任务，只需定义想要执行的任务,然后添加到适当的调度队列(dispatch queue)，不需要编写任何线程管理的代码。
+
+![TIM截图20170717111617](C:\Users\Administrator\Desktop\TIM截图20170717111617.png)
+
+#### 分类
+
+GCD 中 Queue 的种类还要看我们怎么进行分类,。
+
+如果根据**同一时间内处理的操作数**分类的话, GCD 中的 Queue 分为两类
+
+1. Serial Dispatch Queue
+2. Concurrent Dispatch Queue
+
+一类是**串行**派发队列, 它只使用一个线程, 会等待当前执行的操作结束后才会执行下一个操作, 它按照追加的顺序进行处理。
+
+另一类是**并行**派发队列, 它同时使用多个线程, 如果当前的线程数足够, 那么就不会等待正在执行的操作, 使用多个线程同时执行多个处理.
+
+另外的一种分类方式如下:
+
+1. Main Dispatch Queue
+2. Global Dispatch Queue
+3. Custom Dispatch Queue
+
+主线程只有一个, 它是一个串行的进程. 所有追加到 Main Dispatch Queue 中的处理都会在 RunLoop 中执行. 
+
+Global Dispatch Queue 是所有应用程序都能使用的并行派发队列, 它有 4 个执行优先级 High, Default, Low, Background. 
+
+当然我们也可以使用 `dispatch_queue_create`创建派发队列.
+
+#### 同步？异步？串行？并行？
+
+##### 同步还是异步执行任务？
+
+`同步（sync）` 和 `异步（async）` 的主要区别在于会不会阻塞当前线程，直到 `Block` 中的任务执行完毕！
+
+如果是 `同步（sync）` 操作，它会阻塞当前线程并等待 `Block` 中的任务执行完毕，然后当前线程才会继续往下运行。
+
+如果是 `异步（async）`操作，当前线程会直接往下执行，它不会阻塞当前线程。
+
+##### 存放任务的队列，是串行还是并行？
+
+**串行？**
+
+放到串行队列的任务，GCD 会 `FIFO（先进先出）` 地取出来一个，执行一个，然后取下一个，这样一个一个的执行。当我们需要某些任务以指定的顺序去执行时，串行队列是一个非常好的选择。
+
+一个串行队列在同一时间里只会执行一个任务，而且每次都只会从队列的头部把任务取出来执行。正因为如此，我们可以用串行队列来替代锁的操作，比如数据资源的同步或修改数据结构时。和锁不同的是，串行队列能保证任务都是在可预见的顺序里执行，而且一旦我们在一个串行队列里异步提交了任务，队列就能永远不发生死锁。怎么样，是不是很棒，不过不像并发队列，这些串行队列是需要我们自己创建和管理的。
+
+**并行**
+
+放到并行队列的任务，GCD 也会 `FIFO`的取出来，但不同的是，它取出来一个就会放到别的线程，然后再取出来一个又放到另一个的线程。这样由于取的动作很快，忽略不计，看起来，所有的任务都是一起执行的。不过需要注意，GCD 会根据系统资源控制并行的数量，所以如果任务很多，它并不会让所有任务同时执行。
+
+```c
+//dispatch_queue_t
+   //dispatch_queue_create(const char *label, dispatch_queue_attr_t attr);
+
+  //串行队列
+   dispatch_queue_t serialQueue;
+   serialQueue = dispatch_queue_create("com.example.SerialQueue", NULL);
+  //dispatch_queue_attr_t设置成NULL的时候默认代表串行。
+
+  //并发队列
+  dispatch_queue_t concurrentQueue;
+   concurrentQueue = dispatch_queue_create("com.example.ConcurrentQueue", DISPATCH_QUEUE_CONCURRENT);
+```
+
+![img](https://user-gold-cdn.xitu.io/2017/3/9/15b5ef57206dc1de8f6b8341ae2cb814)
+
+|      | 同步执行        | 异步执行        |
+| ---- | ----------- | ----------- |
+| 串行队列 | 当前线程，一个一个执行 | 其他线程，一个一个执行 |
+| 并行队列 | 当前线程，一个一个执行 | 开很多线程，一起执行  |
+
+> 1.所有的执行都放到队列中(queue)，队列的特点是FIFO（先提交的先执行）
+> 2.必须在主线程访问 UIKit 的类
+> 3.并发队列只在异步函数下才有效
+
+#### 基本使用
+
+```c
+NSLog(@"当前线程: %@", [NSThread currentThread]);
+
+ //获取主队列
+ dispatch_queue_t mainQueue = dispatch_get_main_queue();
+
+ //获取全局并发队列
+ dispatch_queue_t otherQueue =   dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+
+ //全局队列的四种类型
+ //DISPATCH_QUEUE_PRIORITY_HIGH
+ //DISPATCH_QUEUE_PRIORITY_DEFAULT
+ //DISPATCH_QUEUE_PRIORITY_LOW
+ //DISPATCH_QUEUE_PRIORITY_BACKGROUND  磁盘的读写等读写操作可以放在这里
+
+ //同步函数(在当前线程中执行,不具备开启新线程的能力)
+ dispatch_sync(otherQueue, ^{
+      NSLog(@"同步 %@", [NSThread currentThread]);
+ });
+
+ //异步函数(在另一条线程中执行,具备开启新线程的能力)
+ dispatch_async(otherQueue, ^{
+      NSLog(@"异步 %@", [NSThread currentThread]);
+ });
+
+ //输出:   当前线程: {number = 1, name = main}
+ //输出:   同步 {number = 1, name = main}
+ //输出:   异步 {number = 3, name = (null)}
+```
+
+##### 延时执行 dispatch_after()
+
+dispatch_after()延迟一段时间把一项任务提交到队列中执行，返回之后就不能取消
+常用来在在主队列上延迟执行一项任务.
+
+```c
+    NSLog(@"当前线程 %@", [NSThread currentThread]);
+
+    //GCD延时调用(主线程)(主队列)
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NSLog(@"GCD延时(主线程) %@", [NSThread currentThread]);
+    });
+
+    //GCD延时调用(其他线程)(全局并发队列)
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSLog(@"GCD延时(其他线程) %@", [NSThread currentThread]);
+    });
+
+    //输出:   当前线程 {number = 1, name = main}
+    //输出:   GCD延时(主线程) {number = 1, name = main}
+    //输出:   GCD延时(其他线程) {number = 3, name = (null)}
+```
+
+##### 一次性执行 dispatch_once()
+
+整个程序运行中,只会执行一次 (默认线程是安全的)，dispatch_once() 以线程安全的方式执行且仅执行其代码块一次。单例就可以这样写。
+
+```c
+//使用GCD初始化单例
++ (instancetype)sharedManager { 
+
+    static PhotoManager *sharedPhotoManager = nil; 
+    static dispatch_once_t onceToken; 
+    dispatch_once(&onceToken, ^{ 
+        sharedPhotoManager = [[PhotoManager alloc] init]; 
+    }); 
+
+    return sharedPhotoManager; 
+}
+```
+
+```c
+    for (NSInteger i = 0; i < 10; i++) {
+
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            NSLog(@"GCD一次性执行(默认线程是安全的)");
+        });
+
+    }
+
+ //输出:   GCD一次性执行(默认线程是安全的)
+```
+
+##### 并发执行迭代循环dispatch_apply()
+
+GCD提供了一个简化方法叫做dispatch_apply，当我们把这个方法放到并发队列中执行时，这个函数会调用单一block多次，并平行运算，然后等待所有运算结束。
+
+```c
+dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+dispatch_apply(count, queue, ^(size_t i) {
+   NSLog("%d",i);
+});
+```
+
+##### dispatch_group_async()队列组
+
+**Dispatch groups**是阻塞线程直到一个或多个任务完成的一种方式。在那些需要等待任务完成才能执行某个处理的时候，你可以使用这个方法。**Dispatch Group**会在整个组的任务都完成时通知你，这些任务可以是同步的，也可以是异步的，即便在不同的队列也行。而且在整个组的任务都完成时，**Dispatch Group**可以用同步的或者异步的方式通知你。当group中所有的任务都完成时，GCD 提供了两种通知方式。
+
+1. **dispatch_group_wait**。它会阻塞当前线程，直到组里面所有的任务都完成或者等到某个超时发生。
+
+```c
+dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+dispatch_group_t group = dispatch_group_create();
+// 添加队列到组中
+dispatch_group_async(group, queue, ^{
+// 一些异步操作
+});
+//如果在所有任务完成前超时了，该函数会返回一个非零值。
+//你可以对此返回值做条件判断以确定是否超出等待周期；
+dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+// 不需要group后将做释放操作
+dispatch_release(group);
+```
+
+2. **dispatch_group_notify**。它以异步的方式工作，当 Dispatch Group中没有任何任务时，它就会执行其代码，那么 completionBlock便会运行。
+
+   ```c
+   dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+   dispatch_group_t group = dispatch_group_create();
+   // 添加队列到组中
+   dispatch_group_async(group, queue, ^{
+   // 一些异步操作
+   });
+   dispatch_group_notify(group, dispatch_get_main_queue(), ^{ 
+   if (completionBlock) { completionBlock(error); }
+   });
+
+   ```
+
+##### 挂起和恢复队列
+
+有时候，我们不想让队列中的某些任务马上执行，这时我们可以通过挂起操作来阻止一个队列中将要执行的任务。当需要挂起队列时，使用**dispatch_suspend**方法；恢复队列时，使用**dispatch_resume**方法。调用**dispatch_suspend**会增加队列挂起的引用计数，而调用**dispatch_resume**则会减少引用计数，当引用计数大于0时，队列会保持挂起状态。因此，这队列的挂起和恢复中，我们需要小心使用以避免引用计数计算错误的出现。
+
+```c
+dispatch_queue_t myQueue;
+myQueue = dispatch_queue_create("com.example.MyCustomQueue", NULL);
+//挂起队列
+dispatch_suspend(myQueue);
+//恢复队列
+dispatch_resume(myQueue);
+
+//执行挂起操作不会对已经开始执行的任务起作用，它仅仅只会阻止将要进行但是还未开始的任务。
+```
+
+##### 使用Dispatch Semaphores
+
+信号量的作用是控制多个任务对有限数量资源的访问。一个**dispatch semaphore**就像一个普通信号的例外。当资源可用时，获取dispatch semaphore的时间比获取传统的系统信号量要更少。这是因为GCD不调用这个特殊情况下的内核。唯一的一次需要在内核中调用的情况是，当资源不可用且系统需要在停止你的线程直到获取信号。举例来说更容易理解，如果你创建了一个有着两个资源的信号量，那同时最多只能有两个线程可以访问临界区。其他想使用资源的线程必须在FIFO队列里等待。
+
+常用的dispatch semaphore的语法：
+
+1. 当创建信号量（使用**dispatch_semaphore_create**方法），我们可以指定一个正整数，表示可用资源的数量。
+2. 在每一个任务里，调用**dispatch_semaphore_wait**来等待信号量。
+3. 当等待调用返回时，获取资源并做自己的工作。
+4. 当我们用到资源后，释放掉它，然后通过调用**dispatch_semaphore_signal**方法来发出信号。
+
+每一个应用都提供了有限的文件描述符来使用，如果我们需要处理一大堆的文件时，我们不想在运行文件描述符的时候同时打开很多文件。取而代之的是，我们可以用信号量来限制同一时间里文件描述符的数量。下面就是为了实现此需求的简单代码：
+
+```c
+// 创建一个信号量
+dispatch_semaphore_t fd_sema = dispatch_semaphore_create(getdtablesize() / 2);
+// 等待一个空闲的文件描述符
+dispatch_semaphore_wait(fd_sema, DISPATCH_TIME_FOREVER);
+fd = open("/etc/services", O_RDONLY);
+// 当完成时，释放掉文件描述符
+close(fd);
+dispatch_semaphore_signal(fd_sema);
+```
+
+##### dispatch_barrier_async
+
+在访问数据库或文件时，读取操作可以并行执行，但是如果在其中插入写操作，那就要保证写操作时只有唯一线程在访问数据库或文件，这时候就可以用dispatch_barrier_async来实现。当然在Serial Dispatch Queue中就不用担心这个问题。如此实现可以提高访问数据库的效率。
+
+```c
+dispatch_queue_t queue = dispatch_queue_create("com.example.gcd.ForBarrier", DISPATCH_QUEUE_CONCURRENT);
+
+dispatch_async(queue, blk0_for_reading);
+dispatch_async(queue, blk1_for_reading);
+dispatch_async(queue, blk2_for_reading);
+dispatch_async(queue, blk3_for_reading);
+
+dispatch_barrier_async(queue, blk_for_writing);
+
+dispatch_async(queue, blk4_for_reading);
+dispatch_async(queue, blk5_for_reading);
+```
