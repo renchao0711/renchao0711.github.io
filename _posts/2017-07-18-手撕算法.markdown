@@ -1,0 +1,386 @@
+---
+layout:     post
+title:      "手撕算法"
+subtitle:   ""
+date:       2017-07-18 19:00:00
+author:     "renchao"
+header-img: "img/2017.05.03.jpg"
+tags: 
+   - 数据结构与算法
+---
+
+## 手撕算法
+
+[TOC]
+
+### 数据结构
+
+##### 快速排序
+
+```c
+int Partition(int *a,int low,int high){
+  int key = a[low];
+  while(low < high){
+    while(low < high && a[high] >= key)
+      high--;
+    if(low < high)
+      a[low++] = a[high];
+    while(low < high && a[low] <= key)
+      low++;
+    if(low < high)
+      a[high--] = a[low]; 
+  }
+  a[low] = key;
+  return low;
+}
+
+int quickSort(int *a,int start,int end){
+  int flag ;
+  if(a == nil || low <= 0 || high <= 0)
+   	return 0;
+  if(start < end){
+    flag = Partition(a,start,end);
+    quickSort(a,start,flag-1);
+    quickSort(a,flag+1,end);
+  }
+}
+```
+
+##### 斐波那契递归实现
+
+```c
+int func(int n){
+  if(n <= 1)
+    return n;
+  else 
+    return func(n-1) + func(n-2);
+}
+```
+
+##### 斐波那契非递归实现
+
+```c
+int func(int n){
+  if(n <= 1)
+    return n;
+  int f1 = 1,f2 = 0,num = 0;
+  for(int i = 2;i <= n;i++){
+    num = f1 + f2;
+    f2 = f1;
+    f1 = num;
+  }
+  return num;
+}
+```
+
+##### 两个单链表变成一个有序链表(递归)
+
+```c
+ListNode *Merge(ListNode *h1,ListNode *h2){
+  if(h1 == NULL)
+    return h2;
+  else if(h2 == NULL)
+    return h1;
+  ListNode *newhead = NULL;
+  if(h1->value < h2->value){
+    newhead = h1;
+    newhead->next = Merge(h1->next,h2);
+  }
+  else{
+  	newhead = h2;
+    newhead->next = Merge(h1,h2->next);
+  }
+  return newhead;
+}
+```
+
+##### 单链表相邻奇偶交换
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct Node{
+    int   Value;
+    struct Node* pNext;
+}Node;
+
+Node *creatLink(Node *head) {
+    Node *pre = NULL;
+    head = (Node *)malloc(sizeof(Node));
+    pre = head;
+    int a[10] = {1,2,3,4,5,6};
+    for (int i = 0; i < 6; i++) {
+        Node *temp = (Node *)malloc(sizeof(Node));
+        temp->Value = a[i];
+        pre->pNext = temp;
+        pre = temp;
+    }
+    return head;
+}
+
+void swap(Node *head) {
+    Node *first, *second, *third;
+    first = head;
+    second = head->pNext;
+    while (second) {
+        third = second->pNext;
+        if (third == NULL) {
+            break;
+        }
+        first->pNext = third;
+        second->pNext = third->pNext;
+        third->pNext = second;
+        first = third->pNext;
+        second = third->pNext->pNext;
+    }
+}
+
+int main() {
+    Node *head = NULL, *pre;
+    head = creatLink(head);
+    pre = head->pNext;
+    while (pre) {
+        printf("%d ", pre->Value);
+        pre = pre->pNext;
+    }
+    printf("\n");
+    swap(head);
+    pre = head->pNext;
+    while (pre) {
+        printf("%d ", pre->Value);
+        pre = pre->pNext;
+    }
+    printf("\n");
+}
+```
+
+##### 
+
+### 操作系统
+
+##### 生产者消费者
+
+```c
+semaphore mutex = 1 ;   //临界区互斥信号量
+semaphore empty = n ;   //空闲缓冲区
+semaphore full  = 0 ;   //缓冲区初始化为空
+producer() {
+  while(1){
+  	produce an item in nextp; //生产数据
+    P(empty);   //获取空缓冲区单元
+    P(mutex);   //进入临界区
+    add nextp to buffer;   //把数据放入缓冲区
+    V(mutex);   //离开临界区，释放互斥信号量
+    V(full);   //满缓冲区数+1
+  }
+}
+
+consumer() {
+  while(1){
+    P(full);   //获取满缓冲区单元
+    P(mutex);   //进入临界区
+    remove an item from buffer;   //从缓冲区中取出数据
+    V(mutex);   //离开临界区，释放互斥信号量
+    V(empty);	//空缓冲区数+1
+    consume the item；   //消费数据
+  }
+}
+```
+
+##### 读写问题
+
+```c
+    int count = 0;  //用于记录当前的读者数量
+    semaphore mutex = 1;  //用于保护更新count变量时的互斥
+    semaphore rw=1;  //用于保证读者和写者互斥地访问文件
+    semaphore w=1;  //用于实现“写优先”
+    writer(){
+        while(1){
+            P(w);  //在无写进程请求时进入
+            P(rw);  //互斥访问共享文件
+            writing;  //写入
+            V(rw);  // 释放共享文件
+            V(w) ;  //恢复对共享支件的访问
+        }
+    }
+    reader () {  //读者进程
+        while (1){
+            P (w) ;  // 在无写进程请求时进入
+            P (mutex);  // 互斥访问count变量
+            if (count==0)  //当第一个读进程读共享文件时
+                P(rw);  //阻止写进程写
+            count++;  //读者计数器加1
+            V (mutex) ;  //释放互斥变量count
+            V(w);  //恢复对共享文件的访问
+            reading;  //读取
+            P (mutex) ; //互斥访问count变量
+            count--;  //读者计数器减1
+            if (count==0)  //当最后一个读进程读完共享文件
+                V(rw);  //允许写进程写
+            V (mutex);  //释放互斥变量count
+        }
+    }
+```
+
+##### 哲学家进餐
+
+```c
+    semaphore chopstick[5] = {1,1,1,1,1}; //初始化信号量
+    semaphore mutex=l;  //设置取筷子的信号量
+    Pi(){ //i号哲学家的进程
+        do{
+            P (mutex) ; //在取筷子前获得互斥量
+            P (chopstick [i]) ; //取左边筷子
+            P (chopstick[ (i+1) %5]) ;  //取右边筷子
+            V (mutex) ; //释放取筷子的信号量
+            eat;  //进餐
+            V(chopstick[i] ) ;  //放回左边筷子
+            V(chopstick[ (i+l)%5]) ;  //放回右边筷子
+            think;  // 思考
+        }while(1);
+    }
+```
+
+### OC
+
+##### 单例
+
+```objective-c
+#import "Session.h"
+
+@implementation Session
+
+static Session *session ;
+
+//当我们调用shareInstance方法时获取到的对象是相同的，但是当我们通过alloc和init以及copy来构造对象的时候，依然会创建新的实例。要确保对象的唯一性，所以我们就需要封锁用户通过alloc和init以及copy来构造对象这条道路。
+//我们知道，创建对象的步骤分为申请内存(alloc)、初始化(init)这两个步骤，我们要确保对象的唯一性，因此在第一步这个阶段我们就要拦截它。当我们调用alloc方法时，oc内部会调用allocWithZone这个方法来申请内存，我们覆写这个方法，然后在这个方法中调用shareInstance方法返回单例对象，这样就可以达到我们的目的。拷贝对象也是同样的原理，覆写copyWithZone方法，然后在这个方法中调用shareInstance方法返回单例对象。
+
++ (instancetype)shareInstance{
+  
+  //GCD
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken,^{
+		_session = [[super allocWithZone:NULL]init];
+      //不是使用alloc方法，而是调用[[super allocWithZone:NULL] init] 
+      //已经重载allocWithZone基本的对象分配方法，所以要借用父类（NSObject）的功能来帮助出处理底层内存分配的杂物
+	});
+	
+  //互斥锁
+  /*@syschronized(self){
+    if(_session == nil){
+      _session = [super allocWithZone:zone];
+    }
+  }*/
+	return session;
+}
+
++ (instancetype)allocWithZone:(struct _NSZone *)zone{
+  return [Session shareInstance];
+}
+
+- (id)copyWithZone:(struct _NSZone *)zone{
+	return _session;
+}
+
+- (id)mutableCopyWithZone:(struct _NSZone *)zone{
+	return _session;
+}
+```
+
+##### NSTimer循环引用
+
+```objective-c
+//方法一
+typedef int(^MyBlock)(NSString *str);
+
+@property(nontomic,strong) NSTimer *timer;
+@property(nontomic,copy) MyBlock myblock;
+
+- (instancetype)initWithBlock:(MyBlock)block{
+	self = [super init];
+	if(self){
+		if (block)
+		{
+			myblock = block;
+		}
+		if (!_timer)
+		{
+			__weak typeof(self) weakSelf = self;
+			_timer = [NSTimer scheduledTimerWithTimeInterval:1 target:weakSelf selector:@selector(start) userInfo:nil repeats:YES];
+		}
+	}
+	return self;
+}
+
+- (void)start{
+	NSLog("123");
+}
+
+- (void)dealloc{
+	[_timer invalidate];
+	_timer = nil;
+}
+
+//这样做还是会产生保留环，因为VC没有释放，timer对weakSelf这个变量是强引用。
+//timer->weakSelf->VC->timer,三者之间形成了循环引用。
+
+//--------------------------------------------------------------------------------------------------------
+
+//方法二：为NSTimer增加一个分类，采用block块
+
+#import <Foundation/Foundation.h>
+
+@interface NSTimer (RCUncircle)
+
++ (NSTimer *)rcc_scheduledTimerWithTimeInterval:(NSTimeInterval)interval repeats:(BOOL)repeats block:(void(^)(NSTimer *timer))block;
+
+@end
+
+#import "NSTimer+RCUncircle"
+
+@implementation NSTimer (RCUncircle)
+
++ (NSTimer *)rcc_scheduledTimerWithTimeInterval:(NSTimeInterval)interval repeats:(BOOL)repeats block:(void(^)(NSTimer *timer))block{
+	return [NSTimer scheduledTimerWithTimeInterval:interval target:self selector:@selector(rcc_blockInvoke:) userInfo:[block copy] repeats:repeats];
+}
+
++ (void)rcc_blockInvoke:(NSTimer *)timer{
+	void (^block)(NSTimer *timer) = timer.userInfo;
+	if (block){
+		block(timer);
+	}
+}
+
+@end
+
+#import "ViewController.h"
+#import "NSTimer+RCUncircle"
+
+@interface ViewController ()
+
+@property (nontomic,strong) NSTimer *timer;
+
+@end
+
+@implementation ViewController
+
+//定时器现在的target是NSTimer类对象，这是个单例，此处依然有循环引用，然后类对象无需回收，所以不用担心。
+- (void)viewDidLoad{
+	[super viewDidLoad];
+
+	__weak typeof(self)weakSelf = self;
+	self.timer = [NSTimer rcc_scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer){
+		__strong typeof(self) strongSelf = weakSelf;
+		[strongSelf start];
+	}];
+}
+
+- (void)start{
+	NSLog(@"123");
+}
+
+- (voi)dealloc{
+	[_timer invalidate];
+}
+```
