@@ -59,7 +59,7 @@ tags:
 
 
 
-![Image](C:\Users\Administrator\Desktop\renchao0711.github.io\img\in-post\Image.png)
+![Image](https://github.com/renchao0711/renchao0711.github.io/blob/master/img/in-post/Image.png?raw=true)
 
 #### 起始阶段
 
