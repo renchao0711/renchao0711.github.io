@@ -286,6 +286,23 @@ static Session *session ;
 - (id)mutableCopyWithZone:(struct _NSZone *)zone{
 	return _session;
 }
+
+--------------------------------------------------------------------------
+//大多数单例的使用场景都是到最后一直存活着，这样会带来内存的浪费
+//weak的作用可以用一句话来说明：在不增加对象的引用计数的同时，又使得指针的访问是安全的
+//如果在单例上用上weak？
+//在所有使用单例的对象都释放后，单例对象本身也会自己释放。这样怎么样？
++ (id)shareInstance{
+  static __weak Session *weakSession;
+  Session *strongSession = weakSession;
+  @syschronized(self){
+    if(strongSession == nil){
+      strongSession = [[self alloc]init];
+      weakSession = strongSession;
+    }
+  }
+  return strongSession;
+}
 ```
 
 ##### NSTimer循环引用
