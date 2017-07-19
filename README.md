@@ -1,9 +1,11 @@
-# HuxBlog Boilerplate
+# 任超的博客
 
-##### This is the boilerplate of [Hux Blog](https://github.com/Huxpro/huxpro.github.io), all documents is over there!
+这是我的[个人博客](http://renchao0711.github.io/),会写一些自己整理的博文，涉及到iOS、计算机网络、数据结构和算法、操作系统等。
 
-#### [View Boilerplate &rarr;](http://huangxuan.me/huxblog-boilerplate/)
+就当是自己程序员之路的一个见证好了。
 
-#### [View Live Hux Blog &rarr;](http://huangxuan.me)
+有什么错误希望大神们指出来，还有如果涉及到侵权的行为，及时联系我！
 
-## If you like Hux Blog, Please star [huxpro.github.io repo](https://github.com/Huxpro/huxpro.github.io) instead of this! Thank you!
+喜欢就star吧哈哈~
+
+![](http://pic.962.net/up/2016-10/14760807179493223.gif)
