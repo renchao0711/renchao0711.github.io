@@ -44,9 +44,124 @@ int quickSort(int *a,int start,int end){
     quickSort(a,flag+1,end);
   }
 }
+
+//快排的优化，其实就是对基准数进行选择，最好情况是选出的数恰好能把序列分成两个等长的子序列。
+//1.随机选取基准：但是对重复数组没有很大帮助
+//2.三数取中：但是对重复数组没有很大帮助
+//3.当待排序序列的长度分割到一定大小后，使用插入排序
+//4.在一次分割结束后，可以把与Key相等的元素聚在一起，继续下次分割时，不用再对与key相等元素分割
+
+//最坏情况
+//1.基准是最大或最小 2.顺序已经是反序排列的了
 ```
 
-##### 斐波那契递归实现
+##### 冒泡排序
+
+```c
+//一般实现
+void maopaoSort(int *a,int n){
+  if(a == NULL||n <= 0)
+    return ;
+  for(int i = 0;i < n-1;i++){
+    for(int j = 0;j < n-1-i;j++){
+      if(a[j] > a[j+1]){
+        int tmp = a[j];
+        a[j] = a[j+1];
+        a[j+1] = tmp;
+      }
+    }
+  }
+}
+
+//优化实现
+void maopaoSort(int *a,int n){
+  if(a == NULL||n<=0)
+    return ;
+  for(int i = 0;i < n-1;i++){
+    int flag = 1;
+    for(int j = 0;j < n-1-i;j++){
+      if(a[j] > a[j+1]){
+        flag = 0;
+        int tmp = a[j];
+        a[j] = a[j+1];
+        a[j+1] = tmp;
+      }
+    }
+    if(flag)
+      break;
+  }
+}
+```
+
+##### 选择排序
+
+```c
+void chooseSort(int *a,int n){
+  if(a == NULL ||n <= 0)
+      return ;
+  for(int i = 0;i < n-1;i++){
+   	int index = i;
+    for(int j = i+1;j < n;j++){
+      if(a[j] < a[index]){
+        index = j;
+      }
+    }
+    //将第i小的数，放在第i个位置；如果刚好，就不用交换
+    if(i != index){
+      int tmp = a[i];
+      a[i] = a[index];
+      a[index] = tmp;
+    }
+  }
+}
+```
+
+##### 堆排序
+
+```c
+void heapAdjust(int *a,int i,int n){
+  int child,tmp;
+  
+  for( ;2*i+1 < n;i = child){
+    
+    //子节点的位置 = 父节点的位置 * 2 + 1
+    child = 2*i+1;
+    
+    //得到子节点中较大的节点
+    if(child < n-1 && a[child+1] > a[child])
+      ++child;
+    
+    //如果较大的子节点大于父节点，那么把较大的子节点往上移动，替换它的父节点
+    if(a[i] < a[child]){
+      tmp = a[i];
+      a[i] = a[child];
+      a[child] = tmp;
+    }
+    else
+      break;
+  }
+}
+
+void heapSort(int *a,int n){
+  if(a == NULL||n <= 0)
+    return ;
+  int i;
+  
+  //调整序列的前半部分元素，之后第一个元素为序列最大的元素，n/2-1是最后一个非叶子结点
+  for(i = n/2-1;i >= 0;i--)
+    heapAdjust(a,i,n);
+  
+  for(i = n-1;i > 0;i--){
+    //把第一个元素和当前的最后一个元素交换,保证当前最后一个位置的元素都是在现在这个序列之中最大的
+    a[i] = a[0] ^ a[i];
+    a[0] = a[0] ^ a[i];
+    a[i] = a[0] ^ a[i];
+    heapAdjust(a,0,i);
+  }
+}
+```
+
+##### 斐波那契(递归实现)
 
 ```c
 int func(int n){
@@ -57,7 +172,7 @@ int func(int n){
 }
 ```
 
-##### 斐波那契非递归实现
+##### 斐波那契(非递归实现)
 
 ```c
 int func(int n){
@@ -73,7 +188,7 @@ int func(int n){
 }
 ```
 
-##### 两个单链表变成一个有序链表(递归)
+##### 两个单链表变成一个有序链表(递归实现)
 
 ```c
 ListNode *Merge(ListNode *h1,ListNode *h2){
@@ -155,7 +270,31 @@ int main() {
 }
 ```
 
-##### 
+##### 最小的k个数
+
+```c
+//利用快排，可以先将数组进行排序，然后直接按顺序取k个数即可，时间复杂度为O（n）
+void GetNumbers(int *a,int n,int k){
+  if(a == NULL||n <= 0||k <= 0)
+    return ;
+  int start = 0,end = n - 1;
+  int flag = Partition(a,start,end);
+  while(flag != k-1){
+    if(flag > k-1){
+      end = flag - 1;
+      flag = Partition(a,start,end);
+    }else{
+      start = flag + 1;
+      flag = Partition(a,start,end);
+    }
+  }
+  for(int i = 0;i < k;i++){
+    printf("%d ",a[i]);
+  }
+}
+
+//如果要求不能调整数组元素，那么可以使用堆。用k个数建立最大堆，然后取其他数，与堆顶的数进行比较，比堆顶小则交换，否则取下一个数进行比较。这种做法适合海量数据，复杂度为O（n*logk）。或者使用红黑树，使得查找、删除和插入操作时间复杂度都为O（logk）。
+```
 
 ### 操作系统
 
