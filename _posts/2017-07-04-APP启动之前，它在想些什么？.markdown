@@ -520,7 +520,10 @@ so，总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编
 ![](http://cc.cocimg.com/api/uploads/20161111/1478845880704414.jpg)
 
 1. main函数
+
 2. UIApplicationMain
+
+  ```
   - 创建UIApplication对象
   - 创建UIApplication的delegate对象
   - delegate对象开始处理(监听)系统事件(没有storyboard)
@@ -528,13 +531,19 @@ so，总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编
   - 在application:didFinishLaunchingWithOptions:中创建UIWindow
   - 创建和设置UIWindow的rootViewController
   - 显示窗口
+  ```
+
 3. 根据Info.plist获得最主要storyboard的文件名,加载最主要的storyboard(有storyboard)
+
+  ```
   - 创建UIWindow
   - 创建和设置UIWindow的rootController
   - 显示窗口
+  ```
 
   AppDelegate的代理方法：
 
+  ```objective-c
   //app启动完毕后就会调用
   - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions{
     }
@@ -562,42 +571,61 @@ so，总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编
   // 程序即将退出调用
   - (void)applicationWillTerminate:(UIApplication *)application{
     }
-    **AppDelegate加载顺序**
+  ```
 
-  1. application:didFinishLaunchingWithOptions:
-4. applicationDidBecomeActive:
+##### ViewController的生命周期
 
-**ViewController中的加载顺序**
+[![img](http://img.blog.csdn.net/20130614155652265)](http://xcodev.com/wordpress/wp-content/uploads/2012/03/ViewCtr-Life.png)
 
+##### 设计良好的VC
+
+```
+1、init里不要出现创建view的代码。良好的设计，在init里应该只有相关数据的初始化，而且这些数据都是比较关键的数据。init里不要调self.view，否则会导致viewcontroller创建view。（因为view是lazyinit的）。
+2、loadView中只初始化view，一般用于创建比较关键的view如tableViewController的tabView，UINavigationController的navgationBar，不可调用view的getter（在掉super loadView前），最好也不要初始化一些非关键的view。如果你是从nib文件中创建的viewController在这里一定要首先调用super的loadView方法，但建议不要重载这个方法。
+3、viewDidLoad：这时候view已经有了，最适合创建一些附加的view和控件了。有一点需要注意的是，viewDidLoad会调用多次（viewcontroller可能多次载入view，参见图2）。
+4、viewWillAppear 这个一般在view被添加到superview之前，切换动画之前调用。在这里可以进行一些显示前的处理。比如键盘弹出，一些特殊的过程动画（比如状态条和navigationbar颜色）。
+5、viewDidAppear 一般用于显示后，在切换动画后，如果有需要的操作，可以在这里加入相关代码。
+6、viewDidUnload 这时候viewController的view已经是nil了。由于这一般发生在内存警告时，所以在这里你应该将那些不在显示的view释放了。比如你在viewcontroller的view上加了一个label，而且这个label是viewcontroller的属性，那么你要把这个属性设置成nil，以免占用不必要的内存，而这个label在viewDidLoad时会重新创建。
+```
+
+**View加载顺序**
+
+```
 1. loadView
 2. viewDidLoad
 3. viewWillAppear
 4. viewWillLayoutSubviews
 5. viewDidLayoutSubviews
 6. viewDidAppear
-
-**View中的加载顺序**
-
-1. initWithCoder（如果没有storyboard就会调用initWithFrame，这里两种方法视为一种）
-2. awakeFromNib
-3. layoutSubviews
-4. drawRect
+7. viewWillDisappear
+8. viewDidDisappear
+```
 
 **一些方法的使用时机**
 
-    + (void)load;  //应用程序启动就会调用的方法，在这个方法里写的代码最先调用。
-    + (void)initialize;用到本类时才调用，这个方法里一般设置导航控制器的主题等，如果在后面的方法设置导航栏主题就太迟了！
-    - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary*)launchOptions;   //这个方法里面会创建UIWindow，设置根控制器并展现，比如某些应用程序要加载授权页面也是在这加，也可以设置观察者，监听到通知切换根控制器等。
-    - (void)awakeFromNib;   //在使用IB的时候才会涉及到此方法的使用，当.nib文件被加载的时候，会发送一个awakeFromNib的消息到.nib文件中的每个对象，每个对象都可以定义自己的awakeFromNib函数来响应这个消息，执行一些必要的操作。在这个方法里设置view的背景等一系列普通操作。
-    - (void)loadView;   //创建视图的层次结构，在没有创建控制器的view的情况下不能直接写 self.view 因为self.view的底层是：
-    if（_view == nil）{
-    _view = [self loadView]
-    }
-    //这么写会直接造成死循环，如果重写这个loadView方法里面什么都不写，会显示黑屏。
-    - (void)viewWillLayoutSubviews;   //视图将要布局子视图，苹果建议的设置界面布局属性的方法，这个方法和viewWillAppear里，系统的底层都是没有写任何代码的，也就是说这里面不写super 也是可以的。
-    - (void)layoutSubviews;   //在这个方法里一般设置子控件的frame。
-    - (void)drawRect:(CGRect)rect;   //UI控件都是画上去的，在这一步就是把所有的东西画上去。drawRect方法只能在加载时调用一次，如果后面还需要调用，比如下载进度的圆弧，需要一直刷帧，就要使用setNeedsDisplay来定时多次调用本方法。
-    - (void)applicationDidBecomeActive:(UIApplication *)application;   //这是AppDelegate的应用程序获取焦点方法，真正到了这里，才是所有东西全部加载完毕。
+```objective-c
++ (void)load;   //应用程序启动就会调用的方法，在这个方法里写的代码最先调用。
+
++ (void)initialize;   //用到本类时才调用，这个方法里一般设置导航控制器的主题等，如果在后面的方法设置导航栏主题就太迟了！
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary*)launchOptions;   //这个方法里面会创建UIWindow，设置根控制器并展现，比如某些应用程序要加载授权页面也是在这加，也可以设置观察者，监听到通知切换根控制器等。
+
+- (void)awakeFromNib;   //在使用IB的时候才会涉及到此方法的使用，当.nib文件被加载的时候，会发送一个awakeFromNib的消息到.nib文件中的每个对象，每个对象都可以定义自己的awakeFromNib函数来响应这个消息，执行一些必要的操作。在这个方法里设置view的背景等一系列普通操作。
+
+- (void)loadView;   //创建视图的层次结构，在没有创建控制器的view的情况下不能直接写 self.view 因为self.view的底层是：
+	if（_view == nil）{
+		_view = [self loadView]
+	}
+//这么写会直接造成死循环，如果重写这个loadView方法里面什么都不写，会显示黑屏。
+
+- (void)viewWillLayoutSubviews;   //视图将要布局子视图，苹果建议的设置界面布局属性的方法，这个方法和viewWillAppear里，系统的底层都是没有写任何代码的，也就是说这里面不写super 也是可以的。
+
+- (void)layoutSubviews;   //在这个方法里一般设置子控件的frame。
+
+- (void)drawRect:(CGRect)rect;   //UI控件都是画上去的，在这一步就是把所有的东西画上去。drawRect方法只能在加载时调用一次，如果后面还需要调用，比如下载进度的圆弧，需要一直刷帧，就要使用setNeedsDisplay来定时多次调用本方法。
+
+- (void)applicationDidBecomeActive:(UIApplication *)application;   //这是AppDelegate的应用程序获取焦点方法，真正到了这里，才是所有东西全部加载完毕。
+```
 **启动分析**
 
 应用启动时，会播放一个启动动画。iPhone上是400ms，iPad上是500ms。如果应用启动过慢，用户就会放弃使用，甚至永远都不再回来。为了防止一个应用占用过多的系统资源，开发iOS的苹果工程师门设计了一个“看门狗”的机制。在不同的场景下，“看门狗”会监测应用的性能。如果超出了该场景所规定的运行间，“看门狗”就会强制终结这个应用的进程。
