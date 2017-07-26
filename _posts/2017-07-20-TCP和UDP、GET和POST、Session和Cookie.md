@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "TCP&UDP_GET&POST_Session&Cookie"
+title:      "TCP和UDP、GET和POST、Session和Cookie"
 subtitle:   ""
 date:       2017-07-20 15:00:00
 author:     "renchao"
@@ -35,6 +35,12 @@ tags:
 **TCP设计过于冗余，速度难以进一步提升**   TCP为了实现网络通信的可靠性，使用了复杂的拥塞控制算法，建立了繁琐的握手过程以及重传策略。由于TCP内置在系统协议栈中，极难对其进行改进。
 
 **UDP协议以其简单、传输快的优势，在越来越多场景下取代了TCP**   
+
+#### 如何保证UDP的可靠
+
+UDT协议
+
+自己设计的话，可以在发送方将消息加上序列，保存序列，接收方得到数据返回确认消息，发送方设置一个定时器，定时检查发送了但没有返回确认的消息，如果没有返回则重传。
 
 ### GET VS POST
 
