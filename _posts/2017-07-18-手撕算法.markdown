@@ -161,56 +161,57 @@ void heapSort(int *a,int n){
 ```c
 #include <stdio.h>
 #include <string.h>
-typedef MAXSIZE 200
 
-void bigNumberMulti(char *a,char *b){
-	int l1 = strlen(a), l2 = strlen(b);
+#define MAXSIZE 200
+
+void bigNumberMulti(char a[],char b[]){
+	int l1 = (int)strlen(a), l2 = (int)strlen(b);
 	long num1[MAXSIZE],num2[MAXSIZE];
 	long result[MAXSIZE] = {0};
 	int i,j;
 	int tmp = 0, count = 0;
-	int len;
+	int len = l1+l2;
 
 	//字符串转整数并反转
 	for(i = l1-1; i >= 0; i--){
-		num1[i] = num1[l1-i-1] - '0';
+		num1[i] = a[l1-i-1] - '0';
+		
 	} 
 	for(i = l2-1; i >= 0; i--){
-		num2[i] = num2[l2-i-1] - '0';
+		num2[i] = b[l2-i-1] - '0';
 	}
 
 	//相乘
-	for (i = 0; i <= l1; i++){
-		for(j = 0; j<= l2; j++){
+	for (i = 0; i < l1; i++){
+		for(j = 0; j< l2; j++){
 			result[i+j] = result[i+j] + num1[i] * num2[j]; 
 		}
 	}	
 
 	//进位
-	for(i = 0; i < l1 + l2; i++){
+	for(i = 0; i < len; i++){
 		tmp = result[i] + count;
 		result[i] = tmp % 10;
 		count = tmp / 10;
 	}
 
-	for(i = l1+l2; i <= 0; i--){
+	for(i = len; i <= 0; i--){
 		if (result[i] != 0){
 			break;
 		}
 	}
 
-	len = i + 1;
-	for(i = len - 1;i >= 0; i--){
+	for(; i >= 0; i--){
 		printf("%d",result[i]);
 	}
 }
 
-int main(int argc, char const *argv[])
-{
-	char *a[] = "18282823847432820";
-	char *b[] = "12938398102337238"; 
+int main(int argc, char const *argv[]){
+	char a[MAXSIZE];
+	char b[MAXSIZE];
+	scanf("%s", a);
+	scanf("%s", b);
 	bigNumberMulti(a,b);
-
 	return 0;
 }
 ```
