@@ -216,6 +216,94 @@ int main(int argc, char const *argv[]){
 }
 ```
 
+##### 大数相加
+
+```c
+//大数相加
+
+#include <stdio.h>
+#include <string.h>
+#define MAXSIZE 200
+
+int flag = 0;
+//字符串逆置
+void reverse(char str[]){
+    int length = (int)strlen(str);
+    char temp;
+    int i = 0 ,j;
+    while(i < length-i-1){
+        for (j = 0; j<length-1; j++) {
+            if (str[j]>'9'||str[j]<'0') {
+                printf("error");
+                flag = 1;
+                break;
+            }
+        }
+        
+        temp = str[i];
+        str[i] = str[length-i-1];
+        str[length-i-1] = temp;
+        i++;
+    }
+
+}
+
+void bigNumAdd(char *a,char *b,char *result){
+    int i,acc = 0,temp;
+    int l1 = (int)strlen(a),l2 = (int)strlen(b);
+    if (a == NULL){
+        result = b;
+    }else if (b == NULL){
+        result = a;
+    }
+    reverse(a);
+    reverse(b);
+    if (flag) {
+        return;
+    }
+    
+    for(i = 0;i < l1 && i < l2;i++){
+        temp = a[i]-'0'+b[i]-'0'+acc;
+        result[i] = temp%10+'0';
+        acc = temp/10;
+    }
+    
+    if (i < l1){
+        for(;i < l1;i++){
+            temp = a[i] - '0' + acc;
+            result[i] = temp%10 +'0';
+            acc = temp/10;
+        }
+    }
+    if (i < l2){
+        for(;i < l2;i++){
+            temp = b[i] - '0' + acc;
+            result[i] = temp%10 + '0';
+            acc = temp/10;
+        }
+    }
+    
+    if (acc == 1){
+        result[i++] = '1';
+    }
+    result[++i] = '\0';
+    reverse(result);
+    printf("%s", result);
+}
+
+int main(int argc, char const *argv[])
+{
+    char a[MAXSIZE];
+    char b[MAXSIZE];
+    char result[MAXSIZE];
+    scanf("%s",a);
+    scanf("%s",b);
+    bigNumAdd(a,b,result);
+    
+    return 0;
+}
+```
+
 ##### 斐波那契(递归实现)
 
 ```c
