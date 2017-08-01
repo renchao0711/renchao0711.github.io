@@ -1,3 +1,14 @@
+---
+layout:     post
+title:      "手撕算法"
+subtitle:   "总结一些常见的算法题"
+date:       2017-05-07 13:25:00
+author:     "renchao"
+header-img: "img/2017.05.07.jpg"
+tags: 
+   - iOS
+---
+
 ## 手撕算法
 
 [TOC]
@@ -352,6 +363,36 @@ ListNode *Merge(ListNode *h1,ListNode *h2){
 }
 ```
 
+##### 二进制数中1的个数
+
+```c++
+//解法一：向右移动二进制数，和1相与，但会造成死循环，二进制最后变成0xFFFFFFFF.
+while(n){
+  if(n & 1)
+    count++;
+  n>>1;
+}
+//解法二：向左移动1，相与
+while(flag){
+  if(n & flag)
+    count++;
+  flag = flag << 1;
+}
+//解法三：该数减1和该数相与，执行次数就是个数
+class Solution {
+public:
+     int  NumberOf1(int n) {
+         int count=0;
+
+         while(n){
+             count++;
+             n=(n-1)&n;
+         }
+         return count;
+     }
+};
+```
+
 #### 链表
 
 ##### 单链表相邻奇偶交换
@@ -630,6 +671,31 @@ Node* findIntersectNode(Node *h1,Node *h2)
 }
 ```
 
+##### 反转链表
+
+```c++
+class Solution {
+public:
+    ListNode* ReverseList(ListNode* pHead) {
+		if(pHead==NULL)
+            return nullptr;
+        ListNode *prenode=NULL;
+        ListNode *node=pHead;
+        ListNode *newhead;
+        while(node){
+            ListNode *nextnode=node->next;
+            if(nextnode==NULL)
+                newhead=node;
+
+            node->next=prenode;
+            prenode=node;
+            node=nextnode;
+        }
+        return newhead;
+    }
+};
+```
+
 #### 数组
 
 ##### 最小的k个数
@@ -656,6 +722,36 @@ void GetNumbers(int *a,int n,int k){
 }
 
 //如果要求不能调整数组元素，那么可以使用堆。用k个数建立最大堆，然后取其他数，与堆顶的数进行比较，比堆顶小则交换，否则取下一个数进行比较。这种做法适合海量数据，复杂度为O（n*logk）。或者使用红黑树，使得查找、删除和插入操作时间复杂度都为O（logk）。
+```
+
+##### 数组奇偶交换，保证顺序
+
+```c++
+class Solution {
+public:
+    void reOrderArray(vector<int> &array) {
+        if(array.size()==0)
+            return;
+		int l = array.size();
+        int newarray[l];
+        int newcount=0,oldcount=0;
+        for(int i =0;i<l;i++){
+            if(array[i]%2!=0){
+                newcount++;
+            }
+        }
+        for(int i =0;i<l;i++){
+            if(array[i]%2==0){
+                newarray[newcount++]=array[i];
+            }else{
+                newarray[oldcount++]=array[i];
+            }
+        }
+        for(int i =0;i<l;i++){
+        	array[i]=newarray[i];
+        }
+    }
+};
 ```
 
 #### 字符串
