@@ -75,4 +75,24 @@ tags:
 
 不过，类的方法列表字段有一点特殊，它的结构是联合体，`method_lists` 和 `method_list` 共用同一块内存地址。当 `newCount` 的个数大于 1 时，使用 `method_lists` 来保存 `newLists` ，并将方法列表的**标志位**置为 `RW_METHOD_ARRAY` ，此时类的方法列表字段是 `method_list_t` 类型的指针数组；否则，使用 `method_list` 来保存 `newLists` ，并将方法列表的**标志位**置空，此时类的方法列表字段是 `method_list_t` 类型的指针。
 
+##### Tagged Pointer
+
+2013年9月推出了首次搭载64架构A7双核处理器的5s。为了节省内存和提高效率，苹果提出了Tagged Pointer的概念。对于64位程序，引入Tagged Pointer后，相关逻辑能减少一半的内存占用，以及3倍的访问速度提升，100倍的创建、销毁速度提升。
+
+我们先看看原有的对象为什么会浪费内存。假设我们要存储一个NSNumber对象，其值是一个整数。正常情况下，如果这个整数只是一个NSInteger的普通变量，那么它所占用的内存是与CPU的位数有关，在32位CPU下占4个字节，在64位CPU下是占8个字节的。而指针类型的大小通常也是与CPU位数相关，一个指针所占用的内存在32位CPU下为4个字节，在64位CPU下也是8个字节。所以一个普通的iOS程序，如果没有`Tagged Pointer`对象，从32位机器迁移到64位机器中后，虽然逻辑没有任何变化，但这种NSNumber、NSDate一类的对象所占用的内存会翻倍。
+
+我们再来看看效率上的问题，为了存储和访问一个NSNumber对象，我们需要在堆上为其分配内存，另外还要维护它的引用计数，管理它的生命期。这些都给程序增加了额外的逻辑，造成运行效率上的损失。
+
+为了改进上面提到的内存占用和效率问题，苹果提出了`Tagged Pointer`对象。由于NSNumber、NSDate一类的变量本身的值需要占用的内存大小常常不需要8个字节，拿整数来说，4个字节所能表示的有符号整数就可以达到20多亿（注：2^31=2147483648，另外1位作为符号位)，对于绝大多数情况都是可以处理的。所以我们可以将一个对象的指针拆成两部分，一部分直接保存数据，另一部分作为特殊标记，表示这是一个特别的指针，不指向任何一个地址。所以，引入了`Tagged Pointer`对象之后，64位CPU下NSNumber的内存图变成了以下这样：
+
+![img](http://cdn1.infoqstatic.com/statics_s2_20170801-0326/resource/articles/deep-understanding-of-tagged-pointer/zh/resources/0519061.jpg)
+
+WWDC2013的《Session 404 Advanced in Objective-C》视频中，看到苹果对于`Tagged Pointer`特点的介绍：
+
+1. `Tagged Pointer`专门用来存储小的对象，例如`NSNumber`和`NSDate`
+2. `Tagged Pointer`指针的值不再是地址了，而是真正的值。所以，实际上它不再是一个对象了，它只是一个披着对象皮的普通变量而已。所以，它的内存并不存储在堆中，也不需要malloc和free。
+3. 在内存读取上有着3倍的效率，创建时比以前快106倍。
+
+苹果将`Tagged Pointer`引入，给64位系统带来了内存的节省和运行效率的提高。`Tagged Pointer`通过在其最后一个bit位设置一个特殊标记，用于将数据直接保存在指针本身中。因为`Tagged Pointer`并不是真正的对象，我们在使用时需要注意不要直接访问其isa变量。
+
 ## 数据库
