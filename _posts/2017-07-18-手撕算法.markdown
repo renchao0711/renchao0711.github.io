@@ -77,7 +77,7 @@ void maopaoSort(int *a,int n){
 
 //优化实现
 void maopaoSort(int *a,int n){
-  if(a == NULL||n<=0)
+  if(a == NULL||n <= 0)
     return ;
   for(int i = 0;i < n-1;i++){
     int flag = 1;
@@ -121,6 +121,10 @@ void chooseSort(int *a,int n){
 ##### 堆排序
 
 ```c
+//堆排序的思想：通过建立一个大根堆或小根堆，根作为最值输出，然后n-1个数再进行堆调整和输出的过程。
+//建堆过程是：将无序数组排列成一个完全二叉树的堆，从最后一个非叶子节点开始调整使得该节点是和两个叶子节点中最大（小）的。直到根节点，随后可以输出根节点。
+//堆调整过程：将根结点输出后，将最后一个叶子结点与根节点交换，此时堆被打乱，开始从根节点向下层开始堆调整，保证堆顶为最值，然后继续输出和调整。
+
 void heapAdjust(int *a,int i,int n){
   int child,tmp;
   
@@ -161,8 +165,9 @@ void heapSort(int *a,int n){
     heapAdjust(a,0,i);
   }
 }
-时间复杂度：建堆过程O（n）、调整堆过程O（n*logn），所以最终是O（n*logn）
-空间复杂度：就地排序O（1）
+
+//时间复杂度：建堆过程O（n）、调整堆过程O（n*logn），所以最终是O（n*logn）
+//空间复杂度：就地排序O（1）
 ```
 
 #### 应用
