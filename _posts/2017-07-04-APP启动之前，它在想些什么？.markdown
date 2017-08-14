@@ -376,6 +376,8 @@ dll、exe、out：可以运行（静态库就是lib文件，动态库就是dll�
 
 签名过程本身是由命令行工具 codesign 来完成的。如果你在 Xcode中build一个应用，这个应用构建完成之后会自动调用codesign 命令进行签名，这也是Link之后的一个关键步骤。
 
+更多详情请看我的另一篇博客[iOS签名机制](https://renchao0711.github.io/2017/08/07/iOS%E7%AD%BE%E5%90%8D%E6%9C%BA%E5%88%B6/)。
+
 ## 使用阶段——APP启动流程
 
 在经过一系列处理后，终于形成一个可以在系统上跑起来的可执行程序，剩下的就是启动运行。**即装载到内存中运行。**
@@ -584,7 +586,7 @@ so，总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编
 > - 绘制阶段，-(void)drawRect:(CGRect)rect 
 > - 启动阶段必要服务的启动、必要数据的创建和读取。
 >
-> 优化启动时间
+> **优化启动时间**
 >
 > - 内嵌的dylib尽可能少，或者合并起来。
 > - Rebase/Binding减少__DATA中需要修正的指针。 对于oc来说减少 class, selector,
@@ -658,6 +660,13 @@ so，总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编
 
 [![img](http://img.blog.csdn.net/20130614155652265)](http://xcodev.com/wordpress/wp-content/uploads/2012/03/ViewCtr-Life.png)
 
+当你alloc并init了一个ViewController时，这个ViewController应该是还没有创建view的。ViewController的view是使用了lazyInit方式创建，就是说你调用的view属性的getter：［self.view］。在getter里会先判断view是否创建，如果没有创建，那么会调用loadView来创建view。loadView完成时会继续调用viewDidLoad。
+
+loadView和viewDidLoad的一个区别就是：loadView时还没有view。而viewDidLoad时view已经创建好了。
+当view被添加其他view中之前时，会调用viewWillAppear，而之后会调用viewDidAppear。
+当view从其他view中移出之前时，会调用viewWillDisAppear，而之后会调用viewDidDisappear。
+当view不在使用，而且是disappeared，受到内存警告时，那么viewController会将view释放并将其指向nil。
+
 ##### 设计良好的VC
 
 ```
@@ -724,12 +733,9 @@ OS X 现在使用的编译器是 [LLVM](http://www.nagain.com/activity/article/4
 
 [GCC，LLVM，Clang编译器对比](http://www.cnblogs.com/qoakzmxncb/archive/2013/04/18/3029105.html)
 
-知乎链接——[Clang 比 GCC 好在哪里？](https://www.zhihu.com/question/20235742)
+[Clang 比 GCC 好在哪里？](https://www.zhihu.com/question/20235742)   ——知乎
 
-GCC 原名为GNU C语言编译器，它原本只能处理 C语言，后来扩展了Objective-C、Java等语言，但是对于Objective-C的处理还是存在众多不便
-GCC 效率低下、性能不强
-苹果开发自己的编译器，有利于开展自己的工具链，比如后期做 Swift、lldb 等
-借用 sunnyxx的图片 来展现下 llvm 的基本架构
+GCC 原名为GNU C语言编译器，它原本只能处理 C语言，后来扩展了Objective-C、Java等语言，但是对于Objective-C的处理还是存在众多不便：GCC 效率低下、性能不强等。苹果开发自己的编译器，有利于开展自己的工具链，比如后期做 Swift、lldb 等。借用 sunnyxx的图片 来展现下 llvm 的基本架构
 
 ![](http://jbcdn2.b0.upaiyun.com/2016/12/a54efe211a8c320399d51519bee5f8d8.jpg)
 
@@ -748,8 +754,9 @@ Clang的任务：预处理、词法分析、语法分析、语义分析、静态
 LLVM的任务：将代码进行优化并产生汇编代码。
 
 - 汇编器：将可读的汇编代码转换为机器代码，最终创建一个目标对象.o文件。
-- 链接器的任务：把目标文件和库相连，最终输出可运行文件：a.out。
 
+
+链接器的任务：把目标文件和库相连，最终输出可运行文件：a.out。
 
 ## 写在文后—iOS的触摸事件
 ## 写在文后—调试器的工作原理
