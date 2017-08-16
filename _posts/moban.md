@@ -9,6 +9,8 @@ date:       2017-08-14 19:25:00
 
 author:     "renchao"
 
+catalog：   true
+
 header-img: "img/2017.05.07.jpg"
 
 tags: 
