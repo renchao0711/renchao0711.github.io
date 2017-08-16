@@ -5,6 +5,7 @@ subtitle:   "总结一些常见的算法题"
 date:       2017-05-07 13:25:00
 author:     "renchao"
 header-img: "img/2017.05.07.jpg"
+catalog:    true
 tags: 
    - iOS
 ---
@@ -759,6 +760,30 @@ public:
 };
 ```
 
+合并两个递增链表
+
+```c
+ ListNode* Merge(ListNode* h1, ListNode* h2){
+        
+        if(h1==NULL)
+        	return h2;
+        else if(h2==NULL)
+            return h1;
+        
+        ListNode *h = NULL;
+                
+        if(h1->val<h2->val){
+            h=h1;
+            h->next=Merge(h1->next,h2);
+        }
+        else{
+            h=h2;
+            h->next=Merge(h1,h2->next);
+        } 
+        return h;   
+    }
+```
+
 #### 数组
 
 ##### 最小的k个数
@@ -813,6 +838,48 @@ public:
         for(int i =0;i<l;i++){
         	array[i]=newarray[i];
         }
+    }
+};
+```
+
+##### 旋转数组中最小的数
+
+```c
+class Solution {
+public:
+    int minNumberInRotateArray(vector<int> a) {
+        int len = a.size();
+        if(len<=0)
+            return 0;
+         
+        int l1=0,l2=len-1;
+        int flag =l1;
+         
+        while(a[l1]>=a[l2]){
+             
+            if(l2-l1==1){
+                flag=l2;
+                break;
+            }
+             
+            flag = (l1+l2)/2;
+             
+            if(a[l1]==a[l2]&&a[l1]==a[flag]){
+                int result = a[l1];
+                for(int i = l1+1;i<=l2;i++){
+                    if(result>a[i])
+                        result = a[i];
+                }
+                return result;
+            }
+             
+            if(a[flag]>=a[l1])
+                l1=flag;
+            else if(a[flag]<=a[l2])
+                l2=flag;
+ 
+        }
+        return a[flag];
     }
 };
 ```
