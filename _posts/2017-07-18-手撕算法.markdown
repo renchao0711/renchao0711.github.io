@@ -21,7 +21,9 @@ tags:
 ##### 快速排序
 
 ```c
-int Partition(int *a,int low,int high){
+#include <stdio.h>
+
+int Partition(int a[],int low,int high){
   int key = a[low];
   while(low < high){
     while(low < high && a[high] >= key)
@@ -37,15 +39,33 @@ int Partition(int *a,int low,int high){
   return low;
 }
 
-int quickSort(int *a,int start,int end){
+void quickSort(int *a,int start,int end){
   int flag ;
-  if(a == nil || low <= 0 || high <= 0)
-   	return 0;
+  if(a == NULL || start < 0 || end <= 0)
+   	return ;
   if(start < end){
     flag = Partition(a,start,end);
     quickSort(a,start,flag-1);
     quickSort(a,flag+1,end);
   }
+	return ;
+}
+
+int main(int argc, char *argv[])
+{
+	int num,a[100],l=0;
+	int i;
+	for(i=0;;i++){
+		scanf("%d",&a[i]);
+		l++;
+		if(getchar()=='\n')
+			break;
+	}
+	quickSort(a,0,l-1);
+	for(i=0;i<l;i++){
+		printf("%d ",a[i]);
+	}
+	return 0;
 }
 
 //快排的优化，其实就是对基准数进行选择，最好情况是选出的数恰好能把序列分成两个等长的子序列。
@@ -54,14 +74,14 @@ int quickSort(int *a,int start,int end){
 //3.当待排序序列的长度分割到一定大小后，使用插入排序
 //4.在一次分割结束后，可以把与Key相等的元素聚在一起，继续下次分割时，不用再对与key相等元素分割
 
-//最坏情况
-//1.基准是最大或最小 2.顺序已经是反序排列的了
+//最坏情况O(n^2)
+//1.基准是最大或最小 2.顺序是反序排列的
 ```
 
 ##### 冒泡排序
 
 ```c
-//一般实现
+//一般实现 O(n^2)
 void maopaoSort(int *a,int n){
   if(a == NULL||n <= 0)
     return ;
@@ -99,11 +119,13 @@ void maopaoSort(int *a,int n){
 ##### 选择排序
 
 ```c
+//O（n^2）
 void chooseSort(int *a,int n){
   if(a == NULL ||n <= 0)
       return ;
   for(int i = 0;i < n-1;i++){
    	int index = i;
+    //一轮中选出最小的一个，记录角标index
     for(int j = i+1;j < n;j++){
       if(a[j] < a[index]){
         index = j;
@@ -138,7 +160,7 @@ void heapAdjust(int *a,int i,int n){
     if(child < n-1 && a[child+1] > a[child])
       ++child;
     
-    //如果较大的子节点大于父节点，那么把较大的子节点往上移动，替换它的父节点
+    //如果较大的子节点大于父节点，那么把较大的子节点 往上移动，替换它的父节点
     if(a[i] < a[child]){
       tmp = a[i];
       a[i] = a[child];
@@ -164,7 +186,7 @@ void heapSort(int *a,int n){
     a[0] = a[0] ^ a[i];
     a[i] = a[0] ^ a[i];
     heapAdjust(a,0,i);
-  }
+  }  
 }
 
 //时间复杂度：建堆过程O（n）、调整堆过程O（n*logn），所以最终是O（n*logn）
@@ -412,25 +434,23 @@ while(n){
     count++;
   n>>1;
 }
+
 //解法二：向左移动1，相与
 while(flag){
   if(n & flag)
     count++;
   flag = flag << 1;
 }
-//解法三：该数减1和该数相与，执行次数就是个数
-class Solution {
-public:
-     int  NumberOf1(int n) {
-         int count=0;
 
-         while(n){
-             count++;
-             n=(n-1)&n;
-         }
-         return count;
-     }
-};
+//解法三：该数减1和该数相与，执行次数就是个数
+int  numberOf1(int n) {
+	int count=0;
+	while(n){
+ 		count++;
+         n=(n-1)&n;
+	}
+	return count;
+}
 ```
 
 ##### 不用加减乘除做加法运算
@@ -442,8 +462,8 @@ public:
 //第三步：重复上述两步，只是相加的值变成上述两步的得到的结果2和10，得到12。
 
 //同样我们可以用三步走的方式计算二进制值相加： 5-101，7-111 
-//第一步：相加各位的值，不算进位，得到010，二进制每位相加就相当于各位做异或操作，101^111。
-//第二步：计算进位值，得到1010，相当于各位做与操作得到101，再向左移一位得到1010，(101&111)<<1。
+//第一步：相加各位的值，不算进位，得到010，二进制每位相加就相当于各位做异或操作，即101^111。
+//第二步：计算进位值，得到1010，相当于各位做与操作得到101，再向左移一位得到1010，即(101&111)<<1。
 //第三步重复上述两步， 各位相加 010^1010=1000，进位值为100=(010&1010)<<1。
 //继续重复上述两步：1000^100 = 1100，进位值为0，跳出循环，1100为最终结果。
 int func(int num1,int num2){
