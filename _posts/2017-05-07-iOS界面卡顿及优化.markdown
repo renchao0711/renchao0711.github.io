@@ -4,6 +4,7 @@ title:      "iOS界面卡顿及优化"
 subtitle:   "不断攀登"
 date:       2017-05-07 13:25:00
 author:     "renchao"
+catalog:    true
 header-img: "img/2017.05.07.jpg"
 tags: 
    - iOS
@@ -44,9 +45,10 @@ tags:
 #### 对象创建*
 对象的创建会分配内存、调整属性、甚至还有读取文件等操作，比较消耗 CPU 资源。尽量用轻量的对象代替重量的对象，可以对性能有所优化。
 
-比如 __CALayer__ 比 __UIView__ 要轻量许多，那么不需要响应触摸事件的控件，用 CALayer 显示会更加合适。如果对象不涉及 UI 操作，则尽量__放到后台线程去创建__，但可惜的是包含有 CALayer 的控件，都只能在主线程创建和操作。通过 __Storyboard__ 创建视图对象时，其资源消耗会比直接通过代码创建对象要大非常多，在性能敏感的界面里，Storyboard 并不是一个好的技术选择。
-
-尽量__推迟对象创建的时间__，并把__对象的创建分散到多个任务中去__。尽管这实现起来比较麻烦，并且带来的优势并不多，但如果有能力做，还是要尽量尝试一下。如果对象可以__复用__，并且复用的代价比释放、创建新对象要小，那么这类对象应当尽量放到一个缓存池里复用。
+- __CALayer__ 比 __UIView__ 要轻量许多，那么不需要响应触摸事件的控件，用 CALayer 显示会更加合适。
+- 如果对象不涉及 UI 操作，则尽量__放到后台线程去创建__，但可惜的是包含有 CALayer 的控件，都只能在主线程创建和操作。
+- 通过 __Storyboard__ 创建视图对象时，其资源消耗会比直接通过代码创建对象要大非常多，在性能敏感的界面里，Storyboard 并不是一个好的技术选择。
+- 尽量__推迟对象创建的时间__，并把__对象的创建分散到多个任务中去__。尽管这实现起来比较麻烦，并且带来的优势并不多，但如果有能力做，还是要尽量尝试一下。如果对象可以__复用__，并且复用的代价比释放、创建新对象要小，那么这类对象应当尽量放到一个缓存池里复用。
 
 > UIView和CALayer的关系
 > 1. 首先UIView可以响应事件，CALayer不可以。
@@ -89,7 +91,7 @@ __后台线程先把图片绘制到 CGBitmapContext 中，然后从 Bitmap 直�
 #### 图像的绘制*
 
 图像的绘制通常是指用那些以 CG 开头的方法把图像绘制到画布中，然后从画布创建图片并显示这样一个过程。这个最常见的地方就是 [UIView drawRect:] 里面了。由于 CoreGraphic 方法通常都是线程安全的，所以图像的绘制可以很容易的放到后台线程进行。一个简单异步绘制的过程大致如下（实际情况会比这个复杂得多，但原理基本一致）：
-```
+```objective-c
 - (void)display {
     dispatch_async(backgroundQueue, ^{
         CGContextRef ctx = CGBitmapContextCreate(...);
@@ -117,14 +119,18 @@ __后台线程先把图片绘制到 CGBitmapContext 中，然后从 Bitmap 直�
 #### 图形的生成
 
 CALayer 的 border、圆角、阴影、遮罩（mask），CASharpLayer 的矢量图形显示，通常会触发__离屏渲染__（offscreen rendering），而离屏渲染通常发生在 GPU 中。当一个列表视图中出现大量圆角的 CALayer，并且快速滑动时，可以观察到 GPU 资源已经占满，而 CPU 资源消耗很少。这时界面仍然能正常滑动，但平均帧数会降到很低。为了避免这种情况，可以尝试开启 CALayer.shouldRasterize 属性，但这会把原本离屏渲染的操作转嫁到 CPU 上去。对于只需要圆角的某些场合，也可以用一张已经绘制好的圆角图片覆盖到原本视图上面来模拟相同的视觉效果。最彻底的解决办法，就是把__需要显示的图形在后台线程绘制为图片__，避免使用圆角、阴影、遮罩等属性。
->拓展：光栅化、离屏渲染、圆角的优化
->
->**光栅化**：将一个layer预先渲染成位图(bitmap)，然后加入缓存中。如果对于阴影效果这样比较消耗资源的静态内容进行缓存，可以得到一定幅度的性能提升。
->`self.layer.shouldRasterize = YES;`  、 `self.layer.rasterizationScale = [UIScreen mainScreen].scale;`                                                                                这样大部分情况下可以马上挽救你的帧数在55帧每秒以上。**shouldRasterize = YES会使视图渲染内容被缓存起来，下次绘制的时候可以直接显示缓存，当然要在视图内容不改变的情况下，节省了一直离屏渲染损耗的性能。**
->
->**离屏渲染**：指的是GPU在当前屏幕缓冲区以外新开辟一个缓冲区进行渲染操作。可以知道离屏渲染耗时是发生在离屏这个动作上面，而不是渲染。为什么离屏这么耗时？原因主要有创建缓冲区和上下文切换。创建新的缓冲区代价都不算大，付出最大代价的是上下文切换。
->
->**圆角的优化**：通过UIBezierPath对象设置带圆角的作图区域。
+
+**拓展：光栅化、离屏渲染、圆角的优化**
+
+- **光栅化**：将一个layer预先渲染成位图(bitmap)，然后加入缓存中。如果对于阴影效果这样比较消耗资源的静态内容进行缓存，可以得到一定幅度的性能提升。
+
+  `self.layer.shouldRasterize = YES;`  、 `self.layer.rasterizationScale = [UIScreen mainScreen].scale;`                                                                              
+
+  这样大部分情况下可以马上挽救你的帧数在55帧每秒以上。**shouldRasterize = YES会使视图渲染内容被缓存起来，下次绘制的时候可以直接显示缓存，当然要在视图内容不改变的情况下，节省了一直离屏渲染损耗的性能。**
+
+- **离屏渲染**：指的是GPU在当前屏幕缓冲区以外新开辟一个缓冲区进行渲染操作。可以知道离屏渲染耗时是发生在离屏这个动作上面，而不是渲染。为什么离屏这么耗时？原因主要有创建缓冲区和上下文切换。创建新的缓冲区代价都不算大，付出最大代价的是上下文切换。
+
+- **圆角的优化**：通过UIBezierPath对象设置带圆角的作图区域。
 
 
 ```objective-c
@@ -136,8 +142,6 @@ CALayer 的 border、圆角、阴影、遮罩（mask），CASharpLayer 的矢量
 	[self.image drawInRect:bounds];
 }
 ```
-
-
 
 ## 三、UITableView的优化
 ### Cell重用机制
@@ -155,7 +159,7 @@ UITableView只会创建一屏幕多一点的cell，其他需要展示的cell都�
 例如，要显示100个cell，屏幕上只显示5个，那么会先调用100次height方法，再调用5次cellFor方法，然后当cell进入屏幕时，再调用一次height和cellFor方法。
 
 ### 一些优化手段总结
-1. **正确使用reuseIdentifier重用机制**。如UITableViewCells、UICollectionViewCells、UITableViewHeaderFooterViews设置正确的reuseIdentifier，充分重用，但会有重叠问题。
+1. **正确使用reuseIdentifier重用机制**。如UITableViewCells、UICollectionViewCells、UITableViewHeaderFooterViews设置正确的reuseIdentifier，充分重用，但会有重叠问题，重叠问题的解决方法是在判断cell为空的里面对label进行初始化，保证每个cell里只有一个label。
 
 2. **在height和cellFor这两个方法里面分析**。赋值和计算布局分离。可以在网络请求成功之后立即开始高度等布局的计算。异步后台绘制。对于cell的行高要缓存起来，使得reload数据时，效率也极高。而对于那些网络数据，不需要每次都请求的，应该缓存起来，可以写入数据库，也可以通过plist文件存储。
 
@@ -166,11 +170,11 @@ UITableView只会创建一屏幕多一点的cell，其他需要展示的cell都�
 
 
 5. **尽量少用AutoLayout**。如果视图较少，可以采用left/right/top/bottom/width/height 快捷属性。
-
 6. **图片载入**。后台解码，加载图片，主线程显示。多用CALayer，少用UIView。
+7. **延迟加载**。对于不应该使用的数据，使用延迟加载方式。对于不需要马上显示的视图，使用延迟加载方式。比如，网络请求失败时显示的提示界面，可能一直都不会使用到，因此应该使用延迟加载。
 > 拓展：**UIImage的加载方式比较**
 >
-> 1. `imageNamed`:
+> 1. `imageNamed：`
 >   这个方法用一个指定的名字在系统缓存中查找并返回一个图片对象（如果它存在的话）。如果缓存中没有找到相应的图片，这个方法从指定的文档中加载然后缓存并返回这个对象。因此imageNamed的优点是当__加载时会缓存图片__。所以当图片会频繁的使用时，那么用imageNamed的方法会比较好。用imageNamed的方式加载时，系统会把图像Cache到内存。如果图像比较大，或者图像比较多，用这种方式会**消耗很大的内存**，而且释放图像的内存是一件相对来说比较麻烦的事情。例如：如果利用imageNamed的方式加载图像到一个动态数组NSMutableArray，然后将将数组赋予一 个UIView的对象的animationImages进行逐帧动画，那么这将会很有可能造成内存泄露。并且释放图像所占据的内存也不会那么简单。但是利用imageNamed加载图像也有自己的优势。__对于同一个图像系统只会把它Cache到内存一次__，这对于图像的**重复利用**是非常有优势的。例如：你需要在 一个TableView里重复加载同样一个图标，那么用imageNamed加载图像，系统会把那个图标Cache到内存，在Table里每次利用那个图像的时候，只会把图片指针指向同一块内存。这种情况使用imageNamed加载图像就会变得非常有效。 
 >
 > 2. ```objective-c
@@ -183,13 +187,10 @@ UITableView只会创建一屏幕多一点的cell，其他需要展示的cell都�
 >
 >   ```objective-c
 >   NSString *filePath = [[NSBundle mainBundle] pathForResource:fileName ofType:@"图片扩展名"]; 
->   [UIImage imageWithContentsOfFile:aImagePath]; `
+>   [UIImage imageWithContentsOfFile:aImagePath]; 
 >   ```
 >
 >   利用NSData或imageWithContentOfFile方式加载时，图像会被系统以数据方式加载到程序。当你不需要重用该图像，或者你需要 将图像以数据方式存储到数据库，又或者你要通过网络下载一个很大的图像时，请尽量使用imageWithData的方式加载图像。__仅加载图片，图像数据不会缓存__。因此对于较大的图片以及使用情况较少时，那就可以用该方法，降低内存消耗。
-
-7. **延迟加载**。对于不应该使用的数据，使用延迟加载方式。对于不需要马上显示的视图，使用延迟加载方式。比如，网络请求失败时显示的提示界面，可能一直都不会使用到，因此应该使用延迟加载。
-
 
 ## 四、界面优化的第三方库
 
@@ -199,21 +200,19 @@ UITableView只会创建一屏幕多一点的cell，其他需要展示的cell都�
 
 对于一般的开发者，自己重新实现一整套异步布局和渲染机制是非常困难的。幸运的是，ASDK做到了。
 
-AsyncDisplayKit(ASDK)是2012年由Facebook开始着手开发，并于2014年出品的高性能显示类库，主要作者是Scott
-Goodson。Scott(github:appleguy)曾经参与了多个iOS版本系统的开发，包括UIKit以及一些系统原生app，后来加入Facebook并参与了ASDK的开发并应用到Paper，因此该库有机会从相对底层的角度来进行一系列的优化。
+AsyncDisplayKit(ASDK)是2012年由Facebook开始着手开发，并于2014年出品的高性能显示类库。
 
 现在最新的版本是2.0，除了拥有1.0系列版本核心的异步布局渲染功能，还增加了类似ComponentKit的基于flexbox的布局功能。源文件一共近300个，3万多行代码，是一个非常庞大而精密的显示和布局系统。使用上如果不考虑工程成本，完全可以在一定程度上代替UIKit的大部分功能。同时由于和Instagram同处于FB家族，因此也迅速在最近的更新中加入了IGListKit的支持。
 
 在Scott介绍ASDK的视频中，总结了一下三点占用大量CPU时间的『元凶』（虽然仍然可能有以上提到的其他原因，但ASDK最主要集中于这三点进行优化）：
 
 1. __渲染__，对于大量图片，或者大量文字（尤其是CJK字符）混合在一起时。而文字区域的大小和布局，恰恰依赖着渲染的结果。ASDK尽可能后台线程进行渲染，完成后再同步回主线程相应的UIView。
-2. __布局__。ASDK完全弃用了Autolayout，另辟蹊径实现了自己的布局和缓存机制。关于布局的问题会在下一篇讲到。
-3. __系统objects的创建与销毁__。由于UIKit封装了CALayer以支持触摸等显示以外的操作，耗时也相应增加。而这些同样也需要在主线程上操作。ASDK基于Node的设计，突破了UIKit线程的限制。
-  既然同步就意味着阻塞，那就异步放到其他线程去做，在需要主线程时再同步回来。
+2. __布局__。ASDK完全弃用了Autolayout，另辟蹊径实现了自己的布局和缓存机制。
+3. __系统objects的创建与销毁__。由于UIKit封装了CALayer以支持触摸等显示以外的操作，耗时也相应增加。而这些同样也需要在主线程上操作。ASDK基于Node的设计，突破了UIKit线程的限制。既然同步就意味着阻塞，那就异步放到其他线程去做，在需要主线程时再同步回来。
 
 我们知道对于一般UIView和CALayer来说，因为不是线程安全的，任何相关操作都需要在主线程进行。正如UIView可以弥补CALayer无法处理用户事件的不足一样，ASDK引入了Node的概念来解决UIView/CALayer只能在主线程上操作的限制（不由让人想起『Abstract layer can solve many problems, except problem of having too many abstract layers.』）。
 
-#### 主要特点：
+#### 主要特点
 
 1. 每个Node对应相应的UIView或者CALayer，从开发者的角度而言，只需要将初始化UIView的代码稍作修改，替换为创建ASDisplayNode即可。在不需要接受用户操作的Node上可以开启isLayerBacked，直接使用CALayer进一步降低开销。根据Scott的研究UIView的开销大约是CALayer的5倍。
 2. Node默认是异步布局/渲染，只有在需要将frame/contents等同步到UIView上才会回到主线程，使其空出更多的时间处理其他事件。
@@ -222,16 +221,19 @@ Goodson。Scott(github:appleguy)曾经参与了多个iOS版本系统的开发，
 5. 当实现自定义View的时候，ASDisplayNode提供了一个初始化方法initWithViewBlock/initWithLayerBlock，就可以将任意UIView/CALayer用Node包裹起来（被包裹的view可以使用autolayout），从而与ASDK的其他组件相结合。虽然这样创建的Node与一般view在布局和渲染上的差异不大，但是由于Node管理着何时何地加载view，我们仍然能得到一定的性能提升。
 
 举例来说，当使用UIKit创建一个UIImageView：
-​	
-	_imageView = [[UIImageView alloc] init];
-	_imageView.image = [UIImage imageNamed:@"hello"];
-	_imageView.frame = CGRectMake(10.0f, 10.0f, 40.0f, 40.0f);
-	[self.view addSubview:_imageView];
+```objective-c
+_imageView = [[UIImageView alloc] init];
+_imageView.image = [UIImage imageNamed:@"hello"];
+_imageView.frame = CGRectMake(10.0f, 10.0f, 40.0f, 40.0f);
+[self.view addSubview:_imageView];
+```
 
 使用ASDK后只要稍加改动：
 
-	_imageNode = [[ASImageNode alloc] init];
-	_imageNode.image = [UIImage imageNamed:@"hello"];
-	_imageNode.frame = CGRectMake(10.0f, 10.0f, 40.0f, 40.0f);
-	[self.view addSubview:_imageNode.view];
+```objective-c
+_imageNode = [[ASImageNode alloc] init];
+_imageNode.image = [UIImage imageNamed:@"hello"];
+_imageNode.frame = CGRectMake(10.0f, 10.0f, 40.0f, 40.0f);
+[self.view addSubview:_imageNode.view];
+```
 虽然只是简单的把View替换成了Node，然而和UIImageView不同的是，此时ASDK已经在悄悄使用另一个线程进行图片解码，从而大大降低新的用户操作到来时主线程被阻塞的概率，使每一个回调都能得到及时的处理。
