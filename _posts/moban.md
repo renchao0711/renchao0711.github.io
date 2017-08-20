@@ -1,20 +1,12 @@
 ---
 layout:     post
-
-title:      "TCP粘包问题"
-
+title:      "进程间通信的方式"
 subtitle:   ""
-
-date:       2017-08-14 19:25:00
-
-author:     "renchao"
-
-catalog：   true
-
+date:       2017-08-14 15:11:00
+author:     "Renchao"
 header-img: "img/2017.05.07.jpg"
-
+catalog:    true
 tags: 
-
-- 计算机网络
+   - 操作系统
 ---
 
