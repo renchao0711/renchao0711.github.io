@@ -362,7 +362,7 @@ obj、o：编译了一半的二进制数据
 dll、exe、out：可以运行（静态库就是lib文件，动态库就是dll文件），exe是win下的可执行文件，out是Linux下的可执行文件
 
 ### 代码签名
-我们每次build之后，都会发现工程目录下多了一个.app文件
+在iOS开发中，我们每次build之后，都会发现工程目录下多了一个.app文件
 ![](http://jbcdn2.b0.upaiyun.com/2016/12/759eb5bd2be3a9c2f08803e466c88811.jpg)
 在 .app目录中，有又一个叫_CodeSignature的子目录，这是一个plist文件，里面包含了程序的代码签名，你的程序一旦签名，就没有办法更改其中的任何东西，包括资源文件，可执行文件等，iOS系统会检查这个签名。
 
@@ -384,7 +384,7 @@ iOS触摸事件的流动见：[iOS触摸事件的流动](http://shellhue.github.
 
 ### main函数之前——从系统开始说起
 
-##### iOS 系统架构
+##### 铺垫：iOS 系统架构
 
 Mac系统是基于Unix内核的图形化操作系统，Mac OS 和 iOS 系统架构的对比分析发现，Mac OS和iOS的系统架构层次只有最上面一层不同，Mac是Cocoa框架，而iOS是Cocoa Touch框架，其余的架构层次都是一样的。
 
@@ -408,7 +408,7 @@ Foundation是属于Objective-C的API，Core Fundation是属于C的API。另外Co
 
 main()函数是整个程序的入口，在程序启动之前，**系统会调用exec()函数**。
 
-在Unix中exec和system的不同在于，system 是在单独的进程中执行命令，完了还会回到你的程序中。而exec函数是直接在你的进程中执行新的程序，新的程序会把你的程序覆盖，除非调用出错，否则你再也回不到exec后面的代码，也就是当前的程序变成了exec调用的那个程序了。
+在Unix中`exec`和`system`的不同在于，`system`是在单独的进程中执行命令，完了还会回到你的程序中。而`exec`函数是**直接在你的进程中执行新的程序，新的程序会把你的程序覆盖**，除非调用出错，否则你再也回不到`exec`后面的代码，也就是当前的程序变成了`exec`调用的那个程序了。
 
 UNIX 提供了 6 种不同的 exec 函数供我们使用。
 
@@ -426,7 +426,7 @@ int execvp(cosnt char *filename, char *const argv[]);
 
 exec函数族的作用是根据指定的文件名找到可执行文件，并用它来取代调用进程的内容，换句话说，就是**在调用进程内部执行一个可执行文件**。这里的可执行文件既可以是二进制文件，也可以是任何Unix下可执行的脚本文件。
 
-#####动态链接库 
+#####铺垫：动态链接库 
 
 iOS 中用到的所有系统 framework 都是动态链接的，类比成插头和插排，静态链接的代码在编译后的静态链接过程就将插头和插排一个个插好，运行时直接执行二进制文件；而动态链接需要在程序启动时去完成“插插销”的过程，所以在我们写的代码执行前，动态连接器需要完成准备工作。
 
@@ -434,13 +434,9 @@ iOS中的相关文件有如下几种：**Dylib**，动态链接库（又称 DSO 
 
 **动态链接库是一组源代码的模块，每个模块包含一些可供应用程序或者其他动态链接库调用的函数，在应用程序调用一个动态链接库里面的函数的时候，操作系统会将动态链接库的文件映像映射到进程的地址空间中，这样进程中所有的线程就可以调用动态链接库中的函数了。动态链接库加载完成后，这个时候动态链接库对于进程中的线程来说只是一些被放在地址进程空间附加的代码和数据，操作系统为了节省内存空间，同一个动态链接库在内存中只有一个，操作系统也只会加载一次到内存中。**
 
-因为代码段在内存中的权限都是为只读的，所以当多个应用程序加载同一个动态链接库的时候，不用担心应用程序会修改动态链接库的代码段。当线程调用动态链接库的一个函数，函数会在线程栈中取得传递给他的参数，并使用线程栈来存放他需要的变量，动态链接库函数创建的任何对象都为调用线程或者调用进程拥有，动态链接库不会拥有任何对象。如果动态链接库中的一个函数调用了VirtualAlloc，系统会从调用进程的地址空间预定地址，即使撤销了对动态链接库的映射，调用进程的预定地址依然会存在，直到用户取消预定或者进程结束。
-
-静态链接库与动态链接库都是共享代码的方式，如果采用静态链接库，则无论你愿不愿意，lib中的指令都全部被直接包含在最终生成的包文件中了。但是若使用 动态链接库，该 动态链接库 不必被包含在最终包里，包文件执行时可以“动态”地引用和卸载这个与 安装包 独立的 动态链接库文件。静态链接库和动态链接库的另外一个区别在于静态链接库中不能再包含其他的动态链接库或者静态库，而在动态链接库中还可以再包含其他的动态或静态链接库。
+静态链接库与动态链接库都是共享代码的方式，如果采用静态链接库，则无论你愿不愿意，lib中的指令都全部被直接包含在最终生成的包文件中了。但是若使用动态链接库，该动态链接库不必被包含在最终包里，包文件执行时可以“动态”地引用和卸载这个与安装包独立的动态链接库文件。静态链接库和动态链接库的另外一个区别在于静态链接库中不能再包含其他的动态链接库或者静态库，而在动态链接库中还可以再包含其他的动态或静态链接库。
 
 Linux中静态函数库的名字一般是libxxx.a；利用静态函数库编译成的文件比较大，因为整个函数库的所有数据都会被整合进目标代码中。编译后的执行程序不需要外部的函数库支持，因为所有使用的函数都已经被编译进去了。当然这也会成为他的缺点，因为如果静态函数库改变了，那么你的程序必须重新编译。
-
-动态函数库的名字一般是libxxx.so，相对于静态函数库，动态函数库在编译的时候并没有被编译进目标代码中，你的程序执行到相关函数时才调用该函数库里的相应函数，因此动态函数库所产生的可执行文件比较小。由于函数库没有被整合进你的程序，而是程序运行时动态的申请并调用，所以程序的运行环境中必须提供相应的库。动态函数库的改变并不影响你的程序，所以动态函数库的升级比较方便。
 
 iOS开发中静态库和动态库是相对编译期和运行期的。静态库在程序编译时会被链接到目标代码中，程序运行时将不再需要载入静态库。而动态库在程序编译时并不会被链接到目标代码中，只是在程序运行时才被载入，因为在程序运行期间还需要动态库的存在。
 
@@ -448,7 +444,7 @@ iOS中静态库可以用.a或.Framework文件表示，动态库的形式有.dyli
 
 .a是一个纯二进制文件，.framework中除了有二进制文件之外还有资源文件。.a文件不能直接使用，至少要有.h文件配合。.framework文件可以直接使用，.a + .h + sourceFile = .framework。
 
-除了多了的CoreGraphics（被 UIKit 依赖）外，有两个默认添加的 **lib**：libobjc 即 objc 和 runtime，libSystem 中包含了很多系统级别 lib，列几个熟知的：
+除了多了的CoreGraphics（被 UIKit 依赖）外，有两个默认添加的 **lib**：libobjc 即 `objc` 和 `runtime`，libSystem 中包含了很多系统级别 lib，列几个熟知的：
 
 - libdispatch ( GCD )
 - libsystem_c ( C语言库 )
@@ -477,14 +473,14 @@ dyld（the dynamic link editor），系统 kernel 做好启动程序的初始准
 - 某些场景下 main 函数结束后调 libSystem 的 _exit 函数
 
 #####ImageLoader 
-当然这个 image 不是图片的意思，它大概表示一个二进制文件（可执行文件或 so 文件），里面是被编译过的符号、代码等，所以 ImageLoader 作用是将这些文件加载进内存，且每一个文件对应一个ImageLoader实例来负责加载。
+这个`image`不是图片的意思，它大概表示一个**二进制文件**（可执行文件或so文件），里面是被编译过的符号、代码等，所以`ImageLoader`作用是将这些文件加载进内存，且每一个文件对应一个`ImageLoader`实例来负责加载。
 
 两步走：
 
-- 在程序运行时它先将动态链接的 image 递归加载 （也就是上面测试栈中一串的递归调用的时刻）
+- 在程序运行时它先将动态链接的 image 递归加载
 - 再从可执行文件 image 递归加载所有符号
 
-当然所有这些都发生在我们真正的main函数执行前。
+所有这些都发生在我们真正的main函数执行前。
 
 #####runtime 与 +load
 
@@ -496,7 +492,9 @@ dyld（the dynamic link editor），系统 kernel 做好启动程序的初始准
 	dyld_image_state_bound, 1, &map_images);
 	dyld_register_image_state_change_handler(
 	dyld_image_state_dependents_initialized, 0, &load_images);
-可见 dyld 担当了 runtime 和 ImageLoader 中间的协调者，当新 image 加载进来后交由 runtime 大厨去解析这个二进制文件的符号表和代码。用断点法，断住神秘的 +load 函数：
+可见 dyld 担当了 runtime 和 ImageLoader 中间的协调者，**当新 image 加载进来后交由 runtime 大厨去解析这个二进制文件的符号表和代码**。
+
+用断点法，断住神秘的 +load 函数：
 
 ![](http://ww1.sinaimg.cn/mw690/51530583jw1ejyjgvetq1j20jk0bc0uf.jpg)
 
@@ -510,7 +508,7 @@ dyld（the dynamic link editor），系统 kernel 做好启动程序的初始准
 至此，可执行文件中和动态库所有的符号（Class，Protocol，Selector，IMP，…）都已经按格式成功加载到内存中，被 runtime 所管理，再这之后，runtime 的那些方法（动态添加 Class、swizzle 等等才能生效）
 
 #####总结
-整个事件由 dyld 主导，完成运行环境的初始化后，配合 ImageLoader 将二进制文件按格式加载到内存，动态链接依赖库，并由 runtime 负责加载成 objc 定义的结构，所有初始化工作结束后，dyld 调用真正的 main 函数。
+**整个事件由 dyld 主导，完成运行环境的初始化后，配合 ImageLoader 将二进制文件按格式加载到内存，动态链接依赖库，并由 runtime 负责加载成 objc 定义的结构，所有初始化工作结束后，dyld 调用真正的 main 函数。**
 
 值得说明的是，这个过程远比写出来的要复杂，这里只提到了 runtime 这个分支，还有像 GCD、XPC 等重头的系统库初始化分支没有提及（当然，有缓存机制在，它们也不会玩命初始化），总结起来就是 main 函数执行之前，系统做了茫茫多的加载和初始化工作，但都被很好的隐藏了，我们无需关心。
 
@@ -541,19 +539,17 @@ UIKIT_EXTERN int UIApplicationMain(int argc, char *argv[], NSString *principalCl
 #define UIKIT_EXTERN extern "C" __attribute__((visibility("default")))
 #else
 #define UIKIT_EXTERN extern __attribute__((visibility ("default")))
-#endif`
+#endif
 ```
-区分在是否定义了`__cplusplus`，`__cplusplus`很直观的翻译cpp，也就是c++。`__cplusplus`标示符用来判断程序是用c还是c++编译程序编译的。当编译c++程序时,这个标示符会被定义,编译c程序时,不会定义。接着对全句理解，如果已经宏定义了`__cplusplus`（也就是说当前源代码被当作C＋＋源代码处理。否则当前源代码被当中C源代码处理），那么`extern "C" __attribute__((visibility ("default")))`。
+区分在是否定义了`__cplusplus`（C++），`__cplusplus`标示符用来判断程序是用c还是c++编译程序编译的。当编译c++程序时,这个标示符会被定义,编译c程序时,不会定义。接着对全句理解，如果已经宏定义了`__cplusplus`，则当前源代码被当作C＋＋源代码处理。否则当前源代码被当做C源代码处理），即`extern "C" __attribute__((visibility ("default")))`。
 
-extern "C"很好理解，在c＋＋发明之初，为了兼容在当时正处主流的C语言，按照C编译方式进行编译的作用。可以理解为extern "C"就是告诉编译器（也就是Xcode）在编译的时候，要按照原来C语言的编译方式对（全局）函数和变量进行编译。
+`extern "C"`很好理解，在c＋＋发明之初，为了兼容在当时正处主流的C语言，按照C编译方式进行编译的作用。可以理解为`extern "C"`就是告诉编译器（也就是Xcode）在编译的时候，要按照原来C语言的编译方式对（全局）函数和变量进行编译。
 
-C++是一种“不完全的面相对象语言”，对比C/C++ 两种编译方式，C++支持重载，从而使得函数的编译方式不得不同于C的编译，举个栗子，有个函数，更新学生信息的`void upDataStudentInfo(int, int)`;C方式去编译此函数，不会对函数名进行特殊处理，编译后的函数名为`_upDataStudentInfo`,反观C++方式的编译，为了支持重载，`upDataStudentInfo`函数会变成类似`_upDataStudentInfo_int_int`的函数名，同样`void upDataStudentInfo(float, int)`会编译成`_upDataStudentInfo_float_int`类似的函数名。这些都可在.obj文件中查看。此处对于C/C++混编互调的深层学习以及使用，不做分析，我只是个搞iOS的，在编译后寻找函数名等多少也能说出些来，但实在不算熟悉，就不误人子弟了。
+C++是一种“不完全的面相对象语言”，对比C/C++ 两种编译方式，C++支持重载，从而使得函数的编译方式不得不同于C的编译。举个栗子，有个函数，更新学生信息的`void upDataStudentInfo(int, int)`。C方式去编译此函数，不会对函数名进行特殊处理，编译后的函数名为`_upDataStudentInfo`，反观C++方式的编译，为了支持重载，`upDataStudentInfo`函数会变成类似`_upDataStudentInfo_int_int`的函数名，同样`void upDataStudentInfo(float, int)`会编译成`_upDataStudentInfo_float_int`类似的函数名。这些都可在.obj文件中查看。此处对于C/C++混编互调的深层学习以及使用，不做分析，我只是个搞iOS的，在编译后寻找函数名等多少也能说出些来，但实在不算熟悉，就不误人子弟了。
 
-接下来就是`__attribute__((visibility ("default")))`，同出于C系语言，`__attribute__`是用来设置属性的，包括函数、变量、类型，这里我们使用的是设置函数的属性，\__attribute__听传闻说是自测利器，同样在C中，或者C++中，作为入门级的iOSer，理解就可。`visibility`属性是设置将本项目的函数作为库使用时的可见性。
+接下来就是`__attribute__((visibility ("default")))`，同出于C系语言，`__attribute__`是用来设置属性的，包括函数、变量、类型，这里我们使用的是设置函数的属性，`__attribute__`听传闻说是自测利器，同样在C中，或者C++中，作为入门级的iOSer，理解就可。`visibility`属性是设置将本项目的函数作为库使用时的可见性。设置了`__attribute__((visibility ("default")))`，函数的public属性对外可见。
 
-设置了`__attribute__((visibility ("default")))`，函数的public属性对外可见。
-
-so，总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编译方式的、具有extern属性(文件外可见性)、public修饰的方法或变量库外仍可见的属性。
+总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编译方式的、具有extern属性(文件外可见性)、public修饰的方法或变量库外仍可见的属性。
 
 继续分析`int UIApplicationMain(int argc, char *argv[], NSString * __nullable principalClassName, NSString * __nullable delegateClassName);`
 
@@ -567,28 +563,11 @@ so，总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编
 
 2、从给定的应用程序委托类，初始化一个应用程序委托。并把该委托设置为应用程序的委托，这里就有如果传入参数为nil，会调用函数访问 Info.plist文件来寻找主nib文件，获取应用程序委托。 
 
-3、启动主事件循环，并开始接收事件。 
+3、启动主事件循环（runloop），并开始接收事件。 
 
 ### main函数之后
 
-> **main()调用之后的加载时间**
->
-> - 准备阶段，主要是图片的解码
-> - 布局阶段，-(void)layoutSubViews()
-> - 绘制阶段，-(void)drawRect:(CGRect)rect 
-> - 启动阶段必要服务的启动、必要数据的创建和读取。
->
-> **优化启动时间**
->
-> - 内嵌的dylib尽可能少，或者合并起来。
-> - Rebase/Binding减少__DATA中需要修正的指针。 对于oc来说减少 class, selector,
->   category 这些元数据的数量，对与c++来说，减少虚函数数量。swift结构体需要修正的比较少。
-> - 将不必须在+load中做的事延迟到+ initialize中。
-> - 不使用xib，直接用代码加载首页视图。
-> - release版不要用NSLog输出。
-> - 启动时的网络请求尽可能异步。
-
-更多关于iOS卡顿优化请参考本人另一篇博文[iOS卡顿及优化](https://renchao0711.github.io/2017/05/07/iOS%E7%95%8C%E9%9D%A2%E5%8D%A1%E9%A1%BF%E5%8F%8A%E4%BC%98%E5%8C%96/)和这一篇文章[iOS 事件处理机制与图像渲染过程]([http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&mid=400417748&idx=1&sn=0c5f6747dd192c5a0eea32bb4650c160&3rd=MzA3MDU4NTYzMw==&scene=6#rd](http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&mid=400417748&idx=1&sn=0c5f6747dd192c5a0eea32bb4650c160&3rd=MzA3MDU4NTYzMw==&scene=6#rd))。
+关于iOS卡顿优化请参考本人另一篇博文[iOS卡顿及优化](https://renchao0711.github.io/2017/05/07/iOS%E7%95%8C%E9%9D%A2%E5%8D%A1%E9%A1%BF%E5%8F%8A%E4%BC%98%E5%8C%96/)和这一篇文章[iOS 事件处理机制与图像渲染过程]([http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&mid=400417748&idx=1&sn=0c5f6747dd192c5a0eea32bb4650c160&3rd=MzA3MDU4NTYzMw==&scene=6#rd](http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&mid=400417748&idx=1&sn=0c5f6747dd192c5a0eea32bb4650c160&3rd=MzA3MDU4NTYzMw==&scene=6#rd))。
 
 下图为iOS App启动流程图：
 
@@ -652,7 +631,7 @@ so，总结成一句话，`UIKIT_EXTERN`就是将函数修饰为兼容以往C编
 
 [![img](http://img.blog.csdn.net/20130614155652265)](http://xcodev.com/wordpress/wp-content/uploads/2012/03/ViewCtr-Life.png)
 
-当你alloc并init了一个ViewController时，这个ViewController应该是还没有创建view的。ViewController的view是使用了lazyInit方式创建，就是说你调用的view属性的getter：［self.view］。在getter里会先判断view是否创建，如果没有创建，那么会调用loadView来创建view。loadView完成时会继续调用viewDidLoad。
+当你alloc并init了一个ViewController时，这个ViewController应该是还没有创建view的。ViewController的view是使用懒加载方式创建，就是说你调用的view属性的getter：[self.view]。在getter里会先判断view是否创建，如果没有创建，那么会调用loadView来创建view。loadView完成时会继续调用viewDidLoad。
 
 loadView和viewDidLoad的一个区别就是：loadView时还没有view。而viewDidLoad时view已经创建好了。
 当view被添加其他view中之前时，会调用viewWillAppear，而之后会调用viewDidAppear。
@@ -663,11 +642,16 @@ loadView和viewDidLoad的一个区别就是：loadView时还没有view。而view
 
 ```
 1、init里不要出现创建view的代码。良好的设计，在init里应该只有相关数据的初始化，而且这些数据都是比较关键的数据。init里不要调self.view，否则会导致viewcontroller创建view。（因为view是lazyinit的）。
-2、loadView中只初始化view，一般用于创建比较关键的view如tableViewController的tabView，UINavigationController的navgationBar，不可调用view的getter（在掉super loadView前），最好也不要初始化一些非关键的view。如果你是从nib文件中创建的viewController在这里一定要首先调用super的loadView方法，但建议不要重载这个方法。
+
+2、loadView：只初始化view，一般用于创建比较关键的view如tableViewController的tabView，UINavigationController的navgationBar，不可调用view的getter（在掉super loadView前），最好也不要初始化一些非关键的view。如果你是从nib文件中创建的viewController在这里一定要首先调用super的loadView方法，但建议不要重载这个方法。
+
 3、viewDidLoad：这时候view已经有了，最适合创建一些附加的view和控件了。有一点需要注意的是，viewDidLoad会调用多次（viewcontroller可能多次载入view，参见图2）。
-4、viewWillAppear 这个一般在view被添加到superview之前，切换动画之前调用。在这里可以进行一些显示前的处理。比如键盘弹出，一些特殊的过程动画（比如状态条和navigationbar颜色）。
-5、viewDidAppear 一般用于显示后，在切换动画后，如果有需要的操作，可以在这里加入相关代码。
-6、viewDidUnload 这时候viewController的view已经是nil了。由于这一般发生在内存警告时，所以在这里你应该将那些不在显示的view释放了。比如你在viewcontroller的view上加了一个label，而且这个label是viewcontroller的属性，那么你要把这个属性设置成nil，以免占用不必要的内存，而这个label在viewDidLoad时会重新创建。
+
+4、viewWillAppear：这个一般在view被添加到superview之前，切换动画之前调用。在这里可以进行一些显示前的处理。比如键盘弹出，一些特殊的过程动画（比如状态条和navigationbar颜色）。
+
+5、viewDidAppear：一般用于显示后，在切换动画后，如果有需要的操作，可以在这里加入相关代码。
+
+6、viewDidUnload：这时候viewController的view已经是nil了。由于这一般发生在内存警告时，所以在这里你应该将那些不在显示的view释放了。比如你在viewcontroller的view上加了一个label，而且这个label是viewcontroller的属性，那么你要把这个属性设置成nil，以免占用不必要的内存，而这个label在viewDidLoad时会重新创建。
 ```
 
 **View加载顺序**
