@@ -17,7 +17,7 @@ tags:
 
 ### runtime简介
 
-runTime简称运行时。是一套底层的 C 语言 API，是 iOS 系统的核心之一，也是OC之所以使动态化语言的原因。开发者在编码过程中，可以给任意一个对象发送消息，在编译阶段只是确定了要向接收者发送这条消息，而接受者将要如何响应和处理这条消息，那就要看运行时来决定了。
+runtime简称运行时。是一套底层的 C 语言 API，是 iOS 系统的核心之一，也是OC之所以使动态化语言的原因。开发者在编码过程中，可以给任意一个对象发送消息，在编译阶段只是确定了要向接收者发送这条消息，而接受者将要如何响应和处理这条消息，那就要看运行时来决定了。
 
 对于C语言，调用一个方法其实就是跳到内存中的某一点并开始执行一段代码。没有任何动态的特性，因为这在编译时就决定好了。
 
@@ -196,13 +196,11 @@ objc_msgSend(personclass, @selector(eat));
 首先，Objective-C 运行时会调用 `+resolveInstanceMethod:` 或者 `+resolveClassMethod:`，让你有机会提供一个函数实现。如果你添加了函数并返回 YES， 那运行时系统就会重新启动一次消息发送的过程。还是以 `eat` 为例，你可以这么实现：
 
 ```objective-c
-void EatMethod(id obj, SEL _cmd)  
-{
+void EatMethod(id obj, SEL _cmd)  {
     NSLog(@"Doing eat");
 }
 
-+ (BOOL)resolveInstanceMethod:(SEL)aSEL
-{
++ (BOOL)resolveInstanceMethod:(SEL)aSEL{
     if(aSEL == @selector(eat:)){
         class_addMethod([self class], aSEL, (IMP)EatMethod, "v@:");
         return YES;
