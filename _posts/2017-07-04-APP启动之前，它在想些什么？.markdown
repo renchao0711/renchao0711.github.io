@@ -508,7 +508,7 @@ dyld（the dynamic link editor），系统 kernel 做好启动程序的初始准
 至此，可执行文件中和动态库所有的符号（Class，Protocol，Selector，IMP，…）都已经按格式成功加载到内存中，被 runtime 所管理，再这之后，runtime 的那些方法（动态添加 Class、swizzle 等等才能生效）
 
 #####总结
-**整个事件由 dyld 主导，完成运行环境的初始化后，配合 ImageLoader 将二进制文件按格式加载到内存，动态链接依赖库，并由 runtime 负责加载成 objc 定义的结构，所有初始化工作结束后，dyld 调用真正的 main 函数。**
+**整个事件由动态链接器（dyld）主导，完成运行环境的初始化后，配合 ImageLoader 将二进制文件按格式加载到内存，动态链接依赖库，并由 runtime 负责加载成 objc 定义的结构，所有初始化工作结束后，dyld 调用真正的 main 函数。**
 
 值得说明的是，这个过程远比写出来的要复杂，这里只提到了 runtime 这个分支，还有像 GCD、XPC 等重头的系统库初始化分支没有提及（当然，有缓存机制在，它们也不会玩命初始化），总结起来就是 main 函数执行之前，系统做了茫茫多的加载和初始化工作，但都被很好的隐藏了，我们无需关心。
 
@@ -521,7 +521,7 @@ dyld（the dynamic link editor），系统 kernel 做好启动程序的初始准
 int main(int argc, char * argv[]) 
 {
 	@autoreleasepool { 
-    return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class])); 
+    	return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class])); 
 	} 
 } 
 ```

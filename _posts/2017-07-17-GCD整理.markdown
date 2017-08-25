@@ -93,7 +93,7 @@ GCD 中 Queue 的种类还要看我们怎么进行分类。
 #### 基本使用
 
 ```c
-NSLog(@"当前线程: %@", [NSThread currentThread]);
+ NSLog(@"当前线程: %@", [NSThread currentThread]);
 
  //获取主队列
  dispatch_queue_t mainQueue = dispatch_get_main_queue();
