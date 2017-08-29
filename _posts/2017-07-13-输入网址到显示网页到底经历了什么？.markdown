@@ -93,9 +93,17 @@ RJ45、CLOCK、IEEE802.3    （中继器，集线器，网关）
 
 **数据链路层**
 
-定义了如何让格式化数据以进行传输，以及如何让控制对物理介质的访问。这一层通常还提供错误检测和纠正，以确保数据的可靠传输。
+封装成帧（帧头mac等，帧尾校验和）、透明传输（数据和帧开始符或结束符冲突，添转义符）、差错检验
 
 PPP、FR、HDLC、VLAN、MAC  （网桥，交换机） 
+
+![wKiom1RSQlyiNo0_AACeW-E9wQk121.jpg](http://s3.51cto.com/wyfs02/M01/4D/82/wKiom1RSQlyiNo0_AACeW-E9wQk121.jpg)
+
+![wKiom1RSQnLwVUUGAACVDHvaDeE368.jpg](http://s3.51cto.com/wyfs02/M02/4D/82/wKiom1RSQnLwVUUGAACVDHvaDeE368.jpg)
+
+
+
+![wKiom1RSQqjh4PUsAAD5O7DZ1DM250.jpg](http://s3.51cto.com/wyfs02/M00/4D/82/wKiom1RSQqjh4PUsAAD5O7DZ1DM250.jpg)
 
 **网络层**
 
