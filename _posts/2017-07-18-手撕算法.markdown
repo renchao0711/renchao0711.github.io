@@ -981,7 +981,7 @@ int main(){
 }
 ```
 
-### 树
+#### 树
 
 ##### 二叉树前中后序递归
 
@@ -1082,7 +1082,183 @@ vector<int> postOrder(TreeNode *root) {{
 }
 ```
 
+#### 动态规划
 
+##### 最大连续子序列之和
+
+```c
+//状态转移方程： sum[i]=max(sum[i-1]+a[i],a[i])
+#include <stdio.h>
+main(){
+  int i,sum=0,max=0x80000000;
+  int data[]={1,-2,3,-1,7};
+  for(i=0;i<sizeof(data)/sizeof(data[0]);i++){
+    sum+=data[i];
+    if(sum>max)
+      max=sum;
+    if(sum<0)
+      sum=0;
+  }
+  printf("%d",max);
+}
+```
+
+##### 树塔问题
+
+![img](http://img.my.csdn.net/uploads/201212/01/1354362373_9670.jpg)
+
+```c
+//数塔问题 ：要求从顶层走到底层，若每一步只能走到相邻的结点，则经过的结点的数字之和最大是多少？、
+//转移方程：sum[i] = max(a[左孩子] , a[右孩子]) + a[i]
+#include <stdio.h>
+#define N 5
+main(){
+  int i,j;
+  int data[N][N]={
+    {9,0,0,0,0},
+    {12,15,0,0,0},
+    {10,6,8,0,0},
+    {2,18,9,5,0},
+    {19,7,10,4,16}
+  };
+  for(i=N-1;i>0;i--){
+      for(j=0;j<i;j++){
+          data[i-1][j]+=data[i][j]>data[i][j+1]?data[i][j]:data[i][j+1];
+      }
+  }
+  printf("%d",data[0][0]);
+}
+```
+
+##### 01背包问题
+
+```c
+//背包问题：有m件物品和一个承重为t的背包。第i件物品的重量是w[i]，价值是v[i]。
+//求解将哪些物品装入背包可使这些物品的重量总和不超过背包承重量t，且价值总和最大。
+//转移方程：dp[i][j] = max(dp[i-1][j],dp[i-1][j-weight[i]] + value[i]
+
+#include <stdio.h>
+#include <conio.h>
+#include <string.h>
+ 
+int f[1010],w[1010],v[1010];//f记录不同承重量背包的总价值，w记录不同物品的重量，v记录不同物品的价值
+ 
+int max(int x,int y){//返回x,y的最大值
+    if(x>y) return x;
+    return y;
+}
+ 
+int main(){
+    int t,m,i,j;
+    memset(f,0,sizeof(f));  //总价值初始化为0
+    scanf("%d %d",&t,&m);  //输入背包承重量t、物品的数目m
+    for(i=1;i<=m;i++)
+        scanf("%d %d",&w[i],&v[i]);  //输入m组物品的重量w[i]和价值v[i]
+    for(i=1;i<=m;i++){  //尝试放置每一个物品
+        for(j=t;j>=w[i];j--){
+            f[j]=max(f[j-w[i]]+v[i],f[j]);
+            //在放入第i个物品前后，检验不同j承重量背包的总价值，如果放入第i个物品后比放入前的价值提高了，则修改j承重量背包的价值，否则不变
+        }
+    }
+    printf("%d",f[t]);  //输出承重量为t的背包的总价值
+    printf("\n");
+    getch();
+    return 0;
+}
+```
+
+##### 最长递增子序列
+
+```c
+//转移方程：b[k]=max(max(b[j]|a[j]<a[k],j<k)+1,1)
+#include "stdio.h"   
+main(){  
+    int i,j,length,max=0;  
+    int a[] = {  
+        1,-1,2,-3,4,-5,6,-7  
+    };  
+    int *b;  
+    b = (int *)malloc(sizeof(a));  
+    length = sizeof(a)/sizeof(a[0]);  
+  
+    for(i = 0; i < length; i++){  
+        b[i] = 1;  
+        for(j = 0; j < i; j++){  
+            if(a[i] > a[j] && b[i] <= b[j]){  
+                b[i] = b[j] + 1;  
+            }  
+        }  
+    }  
+    for(i = 0; i < length; i++)  
+        if(b[i] > max)  
+            max = b[i];  
+          
+    printf("%d",max);  
+}  
+```
+
+##### 最长公共子序列(LCS)
+
+```c
+//一个序列 S ，如果分别是两个或多个已知序列的子序列，且是所有符合此条件序列中最长的，则 S 称为已知序列的最长公共子序列。
+//转移方程：
+//dp[i,j] = 0                                 i=0 || j=0
+//dp[i,j] = dp[i-1][j-1]+1                    i>0,j>0, a[i] = b[j]       
+//dp[i,j] = max(dp[i-1][j],dp[i][j-1])        i>0,j>0, a[i] != b[j]
+#include "stdio.h"
+#define M 8
+#define N 6
+	
+void printLSC(int i, int j,char *a, int status[][N]){
+	if(i == 0 || j== 0)
+		return;
+	if(status[i][j] == 0){
+		printLSC(i-1,j-1,a,status);
+		printf("%c",a[i]);
+	}else{
+		if(status[i][j] == 1)
+			printLSC(i-1,j,a,status);
+		else
+			printLSC(i,j-1,a,status);
+	}
+}
+main(){
+	int i,j;
+
+	char a[] = {' ','A','B','C','B','D','A','B'};
+	char b[] = {' ','B','D','C','B','A'};
+	int status[M][N]; //保存状态
+	int dp[M][N];
+
+	for(i = 0; i < M; i++)
+		for(j = 0; j < N; j++){
+			dp[i][j] = 0;
+			status[i][j] = 0;
+		}
+			
+	for(i = 1; i < M; i++)
+		for(j = 1; j < N; j++){
+			if(a[i] == b[j]){
+				dp[i][j] = dp[i-1][j-1] + 1;
+				status[i][j] = 0;
+			}
+			else if(dp[i][j-1] >= dp[i-1][j]){
+				dp[i][j] = dp[i][j-1];
+				status[i][j] = 2;
+			}
+			else{
+				dp[i][j] = dp[i-1][j];
+				status[i][j] = 1;
+			}
+				
+				
+		}
+	printf("最大长度：%d",dp[M-1][N-1]);
+	printf("\n");
+	printLSC(M-1,N-1,a,status);
+	printf("\n");
+}
+```
 
 ### 操作系统
 
