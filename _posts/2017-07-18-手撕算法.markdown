@@ -1112,10 +1112,10 @@ void InOrderTraverse(BiTree T){   //非递归中序遍历
 //最暴力的方法就是对每个节点的状态进行保存，这么做显然是可以的，但是空间复杂度太大了。
 //我们可以保存最后一个访问的节点last，如果满足 (p->right==NULL && last ==p->left) || last=p->right，那么显然p的孩子都访问过了，接下来可以访问p
 
-vector<int> postOrder(TreeNode *root) {{
+vector<int> postOrder(TreeNode *root) {
     vector<int> res;
-    if(root == NULL) return res;
-
+    if(root == NULL) 
+      return res;
     TreeNode *p = root;
     stack<TreeNode *> sta;
     TreeNode *last = root;
