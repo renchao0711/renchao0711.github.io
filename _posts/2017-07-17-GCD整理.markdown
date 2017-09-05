@@ -27,7 +27,7 @@ GCD全称为Grand Central Dispatch，是**libdispatch**的市场名称，而**li
 
 GCD会自动管理线程的生命周期，如创建，调度和销毁。程序员只需要告诉GCD想要执行什么任务，只需定义想要执行的任务,然后添加到适当的调度队列(dispatch queue)，不需要编写任何线程管理的代码。
 
-![](https://github.com/renchao0711/renchao0711.github.io/blob/master/img/in-post/TIM%E6%88%AA%E5%9B%BE20170717111617.png?raw=true)
+![img](http://mmbiz.qpic.cn/mmbiz_png/foPACGrddJ1pGib9DZTrYuaj9iaT5TtW2GPoTd6kW4HWk6fK5Sxe2H71RO2j4rbZkrtHeGvdzNibRL41ubI7My14A/640?tp=webp&wxfrom=5&wx_lazy=1)
 
 #### 分类
 
@@ -87,8 +87,8 @@ GCD 中 Queue 的种类还要看我们怎么进行分类。
 
 **总结：**
 
-- **同步、异步决定是否创建子线程，同步任务不创建子线程，都是在主线程中执行，异步任务创建子线程。** 
-- **串行、并行决定创建子线程的个数，串行创建一个子线程，并行创建多个子线程（具体几个由系统决定）。** 
+- **同步、异步任务决定是否创建子线程，同步任务不创建子线程，都是在主线程中执行，异步任务创建子线程。** 
+- **串行、并行队列决定创建子线程的个数，串行创建一个子线程，并行创建多个子线程（具体几个由系统决定）。** 
 
 #### 基本使用
 

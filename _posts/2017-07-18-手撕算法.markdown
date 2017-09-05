@@ -961,22 +961,59 @@ public:
 ##### 字符串转整数
 
 ```c
-long func(char *p){
-  if(p == NULL)
+//不调用库函数用C语言实现atoi函数的功能：
+#include <stdio.h>
+#include <stdlib.h>
+
+int my_atoi(const char *str);
+
+int main(int argc, char *argv[])
+{
+    char *ptr = " 1234 3455";
+    int n;
+
+    n = my_atoi(ptr);
+    printf("myAtoi:%d/n", n);
+
+    n = atoi(ptr);
+    printf("atoi:%d/n", n);
     return 0;
-  int flag = 1;
-  long n = 0;
-  if(*p == '-'){ 
-    flag = -1;
-	p++;
-  }else if(*p = '+'){
-    p++;
-  }
-  while(*p != '\0'){
-    n = n*10 + *p - '0';
-    p++;
-  }
-  return n * flag;
+}
+
+int my_atoi(const char *str)
+{
+    int value = 0;
+    int flag = 1; //判断符号
+
+    while (*str == ' ')  //跳过字符串前面的空格
+    {
+        str++;
+    }
+    if (*str == '-')  //第一个字符若是‘-’，说明可能是负数
+    {
+        flag = 0;
+        str++;
+    }
+    else if (*str == '+') //第一个字符若是‘+’，说明可能是正数
+    {
+        flag = 1;
+        str++;
+    }//第一个字符若不是‘+’‘-’也不是数字字符，直接返回0
+    else if (*str >= '9' || *str <= '0') 
+    {
+        return 0;    
+    }
+    //当遇到非数字字符或遇到‘/0’时，结束转化
+    while (*str != '/0' && *str <= '9' && *str >= '0')
+    {
+        value = value * 10 + *str - '0'; //将数字字符转为对应的整形数
+        str++;
+    }
+    if (flag == 0) //负数的情况
+    {
+        value = -value;
+    }
+    return value;
 }
 ```
 
