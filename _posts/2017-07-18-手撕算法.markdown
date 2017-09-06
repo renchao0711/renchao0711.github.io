@@ -720,7 +720,6 @@ bool hasCircle(Node *head,Node *&circleNode)
 }
 
 //输入一个单向链表，判断链表是否有环。如果链表存在环，如何找到环的入口点？
-
 //思路：按照上面的思路，假设两个指针在（图Z点）相遇，此时slow指针走过的路径是a+b，而fast指针走过的路径是a+b+c+b。由于fast的步长是slow的两倍，因此可以得到：2（a+b）=a+b+c+b，解得a=c。由上图可以看出从X点到Y点的距离与从Z点到Y点的距离相等，即让slow指针与fast指针相遇后，我们让slow指针再指向头结点（X点），此时fast指针位置不变，再让slow和fast指针同时后移，当两个指针相遇时，slow和fast指向的是恰好是环形链表的起始节点（Y点）。
 
 //代码如下：
@@ -832,7 +831,7 @@ public:
 };
 ```
 
-合并两个递增链表
+##### 合并两个递增链表
 
 ```c
  ListNode* Merge(ListNode* h1, ListNode* h2){
