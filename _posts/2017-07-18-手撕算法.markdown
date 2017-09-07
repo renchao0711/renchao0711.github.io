@@ -463,27 +463,6 @@ f(n)=     -  1                  n=1
           \  2*f(n-1)           n>2
 ```
 
-##### 两个单链表变成一个有序链表(递归实现)
-
-```c
-ListNode *Merge(ListNode *h1,ListNode *h2){
-  if(h1 == NULL)
-    return h2;
-  else if(h2 == NULL)
-    return h1;
-  ListNode *newhead = NULL;
-  if(h1->value < h2->value){
-    newhead = h1;
-    newhead->next = Merge(h1->next,h2);
-  }
-  else{
-  	newhead = h2;
-    newhead->next = Merge(h1,h2->next);
-  }
-  return newhead;
-}
-```
-
 ##### 二进制数中1的个数
 
 ```c++
@@ -534,6 +513,28 @@ int func(int num1,int num2){
 	}
 	return num1;
 } 
+```
+
+##### 最大公约数
+
+```c
+2.1 递归实现
+int gcd(int a, int b){
+        if(!b) 
+        	return a;
+        else  
+        	return gcd(b, a%b );
+}
+2.2 迭代实现
+int gcd(int a, int b){
+        int c = a%b;
+        while(c){
+			a = b;
+              b = c;
+              c = a % b;
+        }
+        return b;
+}
 ```
 
 #### 链表
@@ -834,25 +835,22 @@ public:
 ##### 合并两个递增链表
 
 ```c
- ListNode* Merge(ListNode* h1, ListNode* h2){
-        
-        if(h1==NULL)
-        	return h2;
-        else if(h2==NULL)
-            return h1;
-        
-        ListNode *h = NULL;
-                
-        if(h1->val<h2->val){
-            h=h1;
-            h->next=Merge(h1->next,h2);
-        }
-        else{
-            h=h2;
-            h->next=Merge(h1,h2->next);
-        } 
-        return h;   
-    }
+ ListNode *Merge(ListNode *h1,ListNode *h2){
+  if(h1 == NULL)
+    return h2;
+  else if(h2 == NULL)
+    return h1;
+  ListNode *newhead = NULL;
+  if(h1->value < h2->value){
+    newhead = h1;
+    newhead->next = Merge(h1->next,h2);
+  }
+  else{
+  	newhead = h2;
+    newhead->next = Merge(h1,h2->next);
+  }
+  return newhead;
+}
 ```
 
 #### 数组
