@@ -1314,6 +1314,50 @@ vector<int> postOrder(TreeNode *root) {
 }
 ```
 
+##### 前中序推后序
+
+```c
+#include<stdio.h>  
+#include<stdlib.h>  
+#include<string.h>    
+/** 已知先序和中序，将后序求出来并存入数组s中 */  
+void print(int n,char * s1,char * s2,char * s){  
+    if(n<=0)  
+        return ;  
+    /* 
+      功能：查找字符s2中首次出现s1[0]的位置 
+      说明：返回首次出现s1[0]的位置的指针， 
+      如果s2中不存在c则返回NULL 
+     */  
+     int p = strchr(s2,s1[0])-s2;  
+     //这个是采用递归得到左子树  
+     print(p,s1+1,s2,s);  
+     //这个是采用递归得到右子树  
+     print(n-1-p,s1+p+1,s2+p+1,s+p);  
+     //要得到后序遍历,所以整个的最后一个是根  
+     s[n-1] = s1[0];  
+}  
+int main() {  
+    /* 
+    定义s1用来存放前序，s2用来存放中序 
+    ans用来存放后序 
+    */  
+    char s1[30],s2[30],ans[30];  
+    memset(s1,0,sizeof(s1));  
+    memset(s2,0,sizeof(s2));  
+    //EOF表示无更多的资料可读，是循环终止的条件  
+    while(scanf("%s %s",s1,s2)!=EOF)  
+    {  
+        //获取数组s1的长度  
+        int n=strlen(s1);  
+        print(n,s1,s2,ans);  
+        ans[n]='\0';  
+        printf("%s\n",ans);  
+    }  
+    return 0;  
+}  
+```
+
 #### 动态规划
 
 ##### 最大连续子序列之和
