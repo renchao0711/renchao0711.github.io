@@ -20,11 +20,11 @@ AFNetworking是iOS开发者不会不知道的网络库，可能没用过原生NS
 
 从上图来看，afn的整体框架应该分为五大模块：
 
-- 网络通信模块：AFURLSessionManager、AFHTTPSessionManger
-- 网络状态监听模块：Reachability
-- 网络通信安全策略模块：SecurityPolicy
-- 网络通信信息序列化、反序列化模块：Serialization
-- UIKit库的拓展：UIKit+AFNetworking
+- **网络通信模块**：AFURLSessionManager、AFHTTPSessionManger
+- **网络状态监听模块**：Reachability
+- **网络通信安全策略模块**：SecurityPolicy
+- **网络通信信息序列化、反序列化模块**：Serialization
+- **UIKit库的拓展**：UIKit+AFNetworking
 
 其中核心模块是AFURLSessionManager，也就是基于NSURLSessionManager封装的请求类。其余四个模块是为了配合网络通信而做的拓展类。AFHTTPSessionManger只是简单封装自NSURLSessionManager的类，简单的http请求一般就用这个类就足够了。
 
@@ -737,6 +737,7 @@ static dispatch_queue_t url_session_manager_creation_queue() {
          //拿到上传下载期望的数据大小
          self.uploadProgress.totalUnitCount = task.countOfBytesExpectedToSend;
          self.downloadProgress.totalUnitCount = task.countOfBytesExpectedToReceive;
+     ```
 
 
          //将上传与下载进度和 任务绑定在一起，直接cancel suspend resume进度条，可以cancel...任务
@@ -750,14 +751,14 @@ static dispatch_queue_t url_session_manager_creation_queue() {
              __typeof__(weakTask) strongTask = weakTask;
              [strongTask suspend];
          }];
-
+    
          if ([self.uploadProgress respondsToSelector:@selector(setResumingHandler:)]) {
              [self.uploadProgress setResumingHandler:^{
                  __typeof__(weakTask) strongTask = weakTask;
                  [strongTask resume];
              }];
          }
-
+    
          [self.downloadProgress setCancellable:YES];
          [self.downloadProgress setCancellationHandler:^{
              __typeof__(weakTask) strongTask = weakTask;
@@ -768,14 +769,14 @@ static dispatch_queue_t url_session_manager_creation_queue() {
              __typeof__(weakTask) strongTask = weakTask;
              [strongTask suspend];
          }];
-
+    
          if ([self.downloadProgress respondsToSelector:@selector(setResumingHandler:)]) {
              [self.downloadProgress setResumingHandler:^{
                  __typeof__(weakTask) strongTask = weakTask;
                  [strongTask resume];
              }];
          }
-
+    
          //观察task的这些属性
          [task addObserver:self
                 forKeyPath:NSStringFromSelector(@selector(countOfBytesReceived))
@@ -785,7 +786,7 @@ static dispatch_queue_t url_session_manager_creation_queue() {
                 forKeyPath:NSStringFromSelector(@selector(countOfBytesExpectedToReceive))
                    options:NSKeyValueObservingOptionNew
                    context:NULL];
-
+    
          [task addObserver:self
                 forKeyPath:NSStringFromSelector(@selector(countOfBytesSent))
                    options:NSKeyValueObservingOptionNew
@@ -794,7 +795,7 @@ static dispatch_queue_t url_session_manager_creation_queue() {
                 forKeyPath:NSStringFromSelector(@selector(countOfBytesExpectedToSend))
                    options:NSKeyValueObservingOptionNew
                    context:NULL];
-
+    
          //观察progress这两个属性
          [self.downloadProgress addObserver:self
                                  forKeyPath:NSStringFromSelector(@selector(fractionCompleted))
@@ -806,16 +807,16 @@ static dispatch_queue_t url_session_manager_creation_queue() {
                                   context:NULL];
      }
      ```
-
+    
      这个方法也非常简单，主要做了以下几件事：
-
+    
      - 设置`downloadProgress`与`uploadProgress`的一些属性，并且把两者和task的任务状态绑定在了一起。注意这两者都是NSProgress的实例对象，（这里可能又一群小伙伴楞在这了，这是个什么...）简单来说，这就是iOS7引进的一个用来管理进度的类，可以开始，暂停，取消，完整的对应了task的各种状态，当progress进行各种操作的时候，task也会引发对应操作。
-
+    
      - 给task和progress的各个属及添加KVO监听，至于监听了干什么用，我们接着往下看：
-
+    
        ```objective-c
        - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSString *,id> *)change context:(void *)context {
-
+    
          //是task
          if ([object isKindOfClass:[NSURLSessionTask class]] || [object isKindOfClass:[NSURLSessionDownloadTask class]]) {
              //给进度条赋新值
@@ -842,9 +843,9 @@ static dispatch_queue_t url_session_manager_creation_queue() {
          }
        }
        ```
-
+    
        方法非常简单直观，主要就是如果task触发KVO,则给progress进度赋值，应为赋值了，所以会触发progress的KVO，也会调用到这里，然后去执行我们传进来的`downloadProgressBlock`和`uploadProgressBlock`。主要的作用就是为了让进度实时的传递。
-
+    
        还有一点需要注意：我们之前的setProgress和这个KVO监听，都是在我们AF自定义的delegate内的，是**有一个task就会有一个delegate的。所以说我们是每个task都会去监听这些属性，分别在各自的AF代理内。**看到这，可能有些小伙伴会有点乱，没关系。等整个讲完之后我们还会详细的去讲捋一捋manager、task、还有AF自定义代理三者之前的对应关系。
 
    到这里我们整个对task的处理就完成了。

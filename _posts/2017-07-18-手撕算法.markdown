@@ -76,6 +76,35 @@ int main(int argc, char *argv[])
 
 //最坏情况O(n^2)
 //1.基准是最大或最小 2.顺序是反序排列的
+
+//非递归写法
+void quickSort(int *a,int left,int right){
+    if(a==NULL||left<0||right<=0||left>right){
+        return;
+    }
+  stack<int> temp;
+  int i,j;
+  //注意保存顺序，先将初始状态的左右指针压栈
+  temp.push(right);//先存右指针
+  temp.push(left);//再存左指针
+  while(!temp.empty()){
+       i=temp.top();//先弹出左指针
+       temp.pop();
+       j=temp.top();//再弹出右指针
+       temp.pop();
+       if(i<j){
+           int k=Parition(a,i,j);
+           if(k>i){
+               temp.push(k-1);//保存中间变量
+               temp.push(i);//保存中间变量
+           }
+           if(j>k){
+               temp.push(j);
+               temp.push(k+1);
+           }
+       }
+  }
+}
 ```
 
 ##### 冒泡排序
